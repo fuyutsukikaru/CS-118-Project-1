@@ -31,12 +31,40 @@ class Client
 public:
   Client(const std::string& port, const std::string& torrent)
   {
-    // create socket using TCP IP
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    nInfo = new MetaInfo();
+    istream torrentStream = std::istringstream is(torrent);
+    nInfo.wireDecode(torrentStream);
 
+    char* getRequest = prepareRequest().c_str();
+
+    nRequest = new HttpRequest();
+    nRequest->parseRequest(getRequest);
+    trackerPort = nRequest->getPort();    
+  }
+
+  int createConnection(const std::string& port) {
+    // create socket using TCP IP
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in clientAddr;
+    serverAddr.
+    socklen_t clientAddrLen = sizeof(clientAddr);
+    if (getsockname(sockfd, (struct sockaddr*) &clientAddr, &clientAddrLen) == -1) {
+      perror("getsockname");
+      return 3;
+    }
+
+    // connect client
+    char ipstr[INET_ADDRSTRLEN] = {'/0'};
+    inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
+    cout << "Set up a connection from: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
+  }
+
+  int connectTracker() {
+    // Connect to server using tracker's port
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons();
+    serverAddr.sin_port = htons(trackerPort);
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
@@ -46,12 +74,14 @@ public:
       return 2;
     }
 
-    sbt::MetaInfo nInfo = new MetaInfo();
-    istream torrentStream = std::istringstream is(torrent);
-    nInfo.wireDecode(torrentStream);
-
-    string requestLine = nInfo.getAnnounce(); 
+    // Write GET request to the server
   }
+
+private:
+  MetaInfo* nInfo;
+  HttpRequest* nRequest;
+  unsigned short trackerPort;
+  int sockfd;
 };
 
 } // namespace sbt
