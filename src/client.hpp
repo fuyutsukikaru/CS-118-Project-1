@@ -89,7 +89,7 @@ public:
     // Connect to server using tracker's port
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(trackerPort);
+    serverAddr.sin_port = htons(nTrackerPort);
     serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
@@ -141,7 +141,7 @@ public:
 
     HttpRequest req;
     req.setHost(nTrackerUrl);
-    req.setPort(atoi(nPort.c_str()));
+    req.setPort(nTrackerPort);
     req.setMethod(HttpRequest::GET);
     req.setVersion("1.0");
     req.setPath(request);
@@ -157,11 +157,11 @@ public:
 
 private:
   MetaInfo* nInfo;
-  unsigned short trackerPort;
   int sockfd;
   string nPort;
   string nPeerId;
   string nTrackerUrl;
+  unsigned short nTrackerPort;
   char* getRequest;
 };
 
