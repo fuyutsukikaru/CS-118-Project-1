@@ -64,7 +64,7 @@ public:
     char* getRequest = prepareRequest().c_str();
 
     nRequest = new HttpRequest();
-    nRequest->parseRequest(getRequest);
+    nRequest.parseRequest(getRequest);
     trackerPort = nRequest->getPort();    
   }
 
