@@ -34,11 +34,12 @@
 #include <unistd.h>
 
 #include <iostream>
-#include <sstream>
+#include <fstream>
 
 #include "common.hpp"
 #include "meta-info.hpp"
 #include "http/url-encoding.hpp"
+#include "http/http-request.hpp"
 
 using namespace std;
 
@@ -56,34 +57,36 @@ public:
   Client(const std::string& port, const std::string& torrent)
   {
     nPort = port;
+    createConnection();
+
     nInfo = new MetaInfo();
-
-    istream torrentStream = std::istringstream is(torrent);
-    nInfo.wireDecode(torrentStream);
-
-    char* getRequest = prepareRequest().c_str();
+    ifstream torrentStream(torrent, ifstream::in);
+    nInfo->wireDecode(torrentStream);
+    string temp = prepareRequest(0);
+    getRequest = new char[temp.length() + 1];
+    strcpy(getRequest, temp.c_str());
 
     nRequest = new HttpRequest();
-    nRequest.parseRequest(getRequest);
-    trackerPort = nRequest->getPort();    
+    nRequest->parseRequest(getRequest, sizeof(getRequest));
+    trackerPort = nRequest->getPort();
+
+    connectTracker();
   }
 
-  int createConnection(const std::string& port) {
+  int createConnection() {
     // create socket using TCP IP
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     struct sockaddr_in clientAddr;
-    serverAddr.
-    socklen_t clientAddrLen = sizeof(clientAddr);
-    if (getsockname(sockfd, (struct sockaddr*) &clientAddr, &clientAddrLen) == -1) {
-      perror("getsockname");
+    clientAddr.sin_family = AF_INET;
+    clientAddr.sin_port = htons(atoi(nPort.c_str()));
+    clientAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    if (bind(sockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
+      fprintf(stderr, "Failed to connect client to port: %s\n", nPort.c_str());
       return 3;
     }
 
-    // connect client
-    char ipstr[INET_ADDRSTRLEN] = {'/0'};
-    inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
-    cout << "Set up a connection from: " << ipstr << ":" << ntohs(clientAddr.sin_port) << endl;
+    return 0;
   }
 
   int connectTracker() {
@@ -96,9 +99,22 @@ public:
 
     // connect to the server
     if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
-      perror("connect");
+      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
       return 2;
     }
+
+    // send GET request to the tracker
+    if (send(sockfd, getRequest, sizeof(getRequest), 0) == -1) {
+      fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      return 4;
+    }
+
+    char buf[100] = {'\0'};
+    if (recv(sockfd, buf, 100, 0) != -1) {
+      fprintf(stdout, "Received the response!");
+    }
+
+    return 0;
   }
 
   string prepareRequest(int event) {
@@ -138,6 +154,7 @@ private:
   int sockfd;
   string nPort;
   string nPeerId;
+  char* getRequest;
 };
 
 } // namespace sbt
