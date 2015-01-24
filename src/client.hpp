@@ -31,6 +31,20 @@ class Client
 public:
   Client(const std::string& port, const std::string& torrent)
   {
+    // create socket using TCP IP
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    struct sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons();
+    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
+
+    // connect to the server
+    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
+      perror("connect");
+      return 2;
+    }
   }
 };
 
