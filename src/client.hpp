@@ -66,10 +66,6 @@ public:
     getRequest = new char[temp.length() + 1];
     strcpy(getRequest, temp.c_str());
 
-    nRequest = new HttpRequest();
-    nRequest->parseRequest(getRequest, sizeof(getRequest));
-    trackerPort = nRequest->getPort();
-
     connectTracker();
   }
 
@@ -143,17 +139,29 @@ public:
     sprintf(request_url, url_f_c, url_hash, url_peer_id, nPort.c_str(), url_left);
     string request = request_url;
 
-    fprintf(stdout, "%s", request_url);
+    HttpRequest req;
+    req.setHost(nTrackerUrl);
+    req.setPort(atoi(nPort.c_str()));
+    req.setMethod(HttpRequest::GET);
+    req.setVersion("1.0");
+    req.setPath(request);
+    req.addHeader("Accept-Language", "en-US");
+
+    size_t req_length = req.getTotalLength();
+    char *buf = new char[req_length];
+    req.formatRequest(buf);
+
+    request = buf;
     return request;
   }
 
 private:
   MetaInfo* nInfo;
-  HttpRequest* nRequest;
   unsigned short trackerPort;
   int sockfd;
   string nPort;
   string nPeerId;
+  string nTrackerUrl;
   char* getRequest;
 };
 
