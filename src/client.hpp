@@ -45,6 +45,12 @@ public:
       perror("connect");
       return 2;
     }
+
+    sbt::MetaInfo nInfo = new MetaInfo();
+    istream torrentStream = std::istringstream is(torrent);
+    nInfo.wireDecode(torrentStream);
+
+    string requestLine = nInfo.getAnnounce(); 
   }
 };
 
