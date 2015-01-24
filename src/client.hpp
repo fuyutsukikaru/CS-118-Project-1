@@ -106,6 +106,7 @@ public:
 
     const char* url_hash = (url::encode((const uint8_t *)(nInfo->getHash()).get(), 20)).c_str();
     const char* url_peer_id = (url::encode((const uint8_t *)nPeerId.c_str(), 20)).c_str();
+    int url_left = nInfo->getLength();
 
     string url_event = "";
     switch(event) {
@@ -123,7 +124,7 @@ public:
 
     const char* url_f_c = url_f.c_str();
     char request_url[BUFFER_SIZE];
-    sprintf(request_url, url_f_c, url_hash, url_peer_id, nPort.c_str());
+    sprintf(request_url, url_f_c, url_hash, url_peer_id, nPort.c_str(), url_left);
     string request = request_url;
 
     fprintf(stdout, "%s", request_url);
