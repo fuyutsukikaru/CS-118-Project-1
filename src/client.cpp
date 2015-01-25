@@ -20,23 +20,22 @@ enum eventTypes : int {
   kStopped = 2,
 };
 
-Client::Client(const std::string& port, const std::string& torrent)
-  {
-    nPort = port;
-    createConnection();
+Client::Client(const std::string& port, const std::string& torrent) {
+  nPort = port;
+  createConnection();
 
-    nInfo = new MetaInfo();
-    ifstream torrentStream(torrent, ifstream::in);
-    nInfo->wireDecode(torrentStream);
-    fprintf(stdout, "%s\n", (nInfo->getAnnounce()).c_str());
-    extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort);
+  nInfo = new MetaInfo();
+  ifstream torrentStream(torrent, ifstream::in);
+  nInfo->wireDecode(torrentStream);
+  fprintf(stdout, "%s\n", (nInfo->getAnnounce()).c_str());
+  extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort);
 
-    string temp = prepareRequest(kStarted);
-    getRequest = new char[temp.length() + 1];
-    strcpy(getRequest, temp.c_str());
+  string temp = prepareRequest(kStarted);
+  getRequest = new char[temp.length() + 1];
+  strcpy(getRequest, temp.c_str());
 
-    connectTracker();
-  }
+  connectTracker();
+}
 
 int Client::createConnection() {
   // create socket using TCP IP
