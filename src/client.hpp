@@ -76,7 +76,7 @@ public:
     struct sockaddr_in clientAddr;
     clientAddr.sin_family = AF_INET;
     clientAddr.sin_port = htons(atoi(nPort.c_str()));
-    clientAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    clientAddr.sin_addr.s_addr = inet_addr(CLIENT_IP);
     if (bind(sockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
       fprintf(stderr, "Failed to connect client to port: %s\n", nPort.c_str());
       return RC_CLIENT_CONNECTION_FAILED;
@@ -90,7 +90,7 @@ public:
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(nTrackerPort);
-    serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    serverAddr.sin_addr.s_addr = inet_addr(TRACKER_IP);
     memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
     // connect to the server
