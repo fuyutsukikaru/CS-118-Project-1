@@ -91,6 +91,7 @@ int Client::connectTracker() {
     char buf[1000] = {'\0'};
     if (recv(sockfd, buf, sizeof(buf), 0) == -1) {
       fprintf(stderr, "Failed to receive a response from tracker.\n");
+      return RC_NO_TRACKER_RESPONSE;
     }
 
     int buf_size = 0;
@@ -107,7 +108,7 @@ int Client::connectTracker() {
 
       if (nTrackerResponse->isFailure()) {
         fprintf(stderr, "Fail:%s\n", nTrackerResponse->getFailure().c_str());
-        break;
+        return RC_TRACKER_RESPONSE_FAILED;
       }
 
       if (num_times == 0) {
