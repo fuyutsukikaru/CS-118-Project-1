@@ -79,7 +79,7 @@ public:
     clientAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
     if (bind(sockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
       fprintf(stderr, "Failed to connect client to port: %s\n", nPort.c_str());
-      return 3;
+      return RC_CLIENT_CONNECTION_FAILED;
     }
 
     return 0;
@@ -96,13 +96,13 @@ public:
     // connect to the server
     if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
       fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
-      return 2;
+      return RC_TRACKER_CONNECTION_FAILED;
     }
 
     // send GET request to the tracker
     if (send(sockfd, getRequest, sizeof(getRequest), 0) == -1) {
       fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
-      return 4;
+      return RC_SEND_GET_REQUEST_FAILED;
     }
 
     char buf[100] = {'\0'};

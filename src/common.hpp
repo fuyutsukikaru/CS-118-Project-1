@@ -23,6 +23,7 @@
 #define SBT_COMMON_HPP
 
 #include "config.hpp"
+#include "codes.hpp"
 
 #ifdef HAVE_TESTS
 #define SBT_VIRTUAL_WITH_TESTS virtual
