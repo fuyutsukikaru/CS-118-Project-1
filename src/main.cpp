@@ -26,7 +26,9 @@
 int
 main(int argc, char** argv)
 {
+  // seed RNG
   srand(time(NULL));
+
   try
   {
     // Check command line arguments.

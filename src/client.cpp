@@ -82,6 +82,10 @@ int Client::connectTracker() {
   return 0;
 }
 
+/*
+ * Formats and prepares a GET request to the tracker's announce url.
+ * Takes in an event type and returns the prepared request.
+ */
 string Client::prepareRequest(int event) {
   string url_f = "/announce?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
 
@@ -130,6 +134,10 @@ string Client::prepareRequest(int event) {
   return request;
 }
 
+/*
+ * Extracts a host and port number from the given url.
+ * Returns RC_INVALID_URL if parsing failed and 0 otherwise.
+ */
 int Client::extract(const string& url, string& domain, string& port) {
   size_t first = url.find("://");
   if (first != string::npos) {
@@ -163,7 +171,6 @@ string Client::generatePeer() {
     peer_id += to_string(rand() % 10);
   }
 
-  cout << peer_id << endl;
   return peer_id;
 }
 
