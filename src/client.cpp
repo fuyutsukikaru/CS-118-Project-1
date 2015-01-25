@@ -21,10 +21,13 @@ enum eventTypes : int {
 };
 
 Client::Client(const std::string& port, const std::string& torrent) {
+  // create socket using TCP IP
+  sockfd = socket(AF_INET, SOCK_STREAM, 0);
+  
   nPort = port;
   nPeerId = generatePeer();
 
-  createConnection();
+  //createConnection();
 
   nInfo = new MetaInfo();
   ifstream torrentStream(torrent, ifstream::in);
@@ -34,20 +37,23 @@ Client::Client(const std::string& port, const std::string& torrent) {
   string temp = prepareRequest(kStarted);
   getRequest = new char[temp.length() + 1];
   strcpy(getRequest, temp.c_str());
+  fprintf(stderr, "%s\n", getRequest);
 
   connectTracker();
 }
 
 int Client::createConnection() {
-  // create socket using TCP IP
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
   struct sockaddr_in clientAddr;
-  clientAddr.sin_family = AF_INET;
+  /*clientAddr.sin_family = AF_INET;
   clientAddr.sin_port = htons(atoi(nPort.c_str()));
   clientAddr.sin_addr.s_addr = inet_addr(CLIENT_IP);
   if (bind(sockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
     fprintf(stderr, "Failed to connect client to port: %s\n", nPort.c_str());
+    return RC_CLIENT_CONNECTION_FAILED;
+  }*/
+  socklen_t clientAddrLen = sizeof(clientAddr);
+  if (getsockname(sockfd, (struct sockaddr*) &clientAddr, &clientAddrLen) == -1) {
+    fprintf(stderr, "Failed to connect client.\n");
     return RC_CLIENT_CONNECTION_FAILED;
   }
 
@@ -68,16 +74,38 @@ int Client::connectTracker() {
     return RC_TRACKER_CONNECTION_FAILED;
   }
 
+ struct sockaddr_in clientAddr;
+ /*clientAddr.sin_family = AF_INET;
+  clientAddr.sin_port = htons(atoi(nPort.c_str()));
+  clientAddr.sin_addr.s_addr = inet_addr(CLIENT_IP);
+  if (bind(sockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
+    fprintf(stderr, "Failed to connect client to port: %s\n", nPort.c_str());
+    return RC_CLIENT_CONNECTION_FAILED;
+  }*/
+  socklen_t clientAddrLen = sizeof(clientAddr);
+  if (getsockname(sockfd, (struct sockaddr*) &clientAddr, &clientAddrLen) == -1) {
+    fprintf(stderr, "Failed to connect client.\n");
+    return RC_CLIENT_CONNECTION_FAILED;
+  }
+
+   char ipstr[INET_ADDRSTRLEN] = {'\0'};
+  inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
+  std::cout << "Set up a connection from: " << ipstr << ":" <<
+    ntohs(clientAddr.sin_port) << std::endl;
+
   // send GET request to the tracker
   if (send(sockfd, getRequest, sizeof(getRequest), 0) == -1) {
     fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
     return RC_SEND_GET_REQUEST_FAILED;
   }
 
-  char buf[100] = {'\0'};
+  /*char buf[100] = {'\0'};
   if (recv(sockfd, buf, 100, 0) != -1) {
     fprintf(stdout, "Received the response!");
-  }
+    break;
+  }*/
+
+  //close(sockfd);
 
   return 0;
 }
@@ -87,7 +115,7 @@ int Client::connectTracker() {
  * Takes in an event type and returns the prepared request.
  */
 string Client::prepareRequest(int event) {
-  string url_f = "/announce?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
+  string url_f = "https://localhost:12345/announce.php?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
 
   const uint8_t *info_hash = nInfo->getHash()->get();
   int url_left = nInfo->getLength();
@@ -105,6 +133,7 @@ string Client::prepareRequest(int event) {
       break;
   }
   url_f += url_event;
+  url_left = 0;
 
   const char* url_f_c = url_f.c_str();
   char request_url[BUFFER_SIZE];
@@ -120,7 +149,7 @@ string Client::prepareRequest(int event) {
 
   HttpRequest req;
   req.setHost(nTrackerUrl);
-  req.setPort(atoi(nPort.c_str()));
+  req.setPort(atoi(nTrackerPort.c_str()));
   req.setMethod(HttpRequest::GET);
   req.setVersion("1.0");
   req.setPath(request);
