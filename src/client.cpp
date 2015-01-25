@@ -114,7 +114,6 @@ int Client::connectTracker() {
 string Client::prepareRequest(int event) {
   string url_f = "/announce.php?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
 
-  const uint8_t *info_hash = nInfo->getHash()->get();
   int url_left = nInfo->getLength();
 
   string url_event = "";
@@ -137,7 +136,7 @@ string Client::prepareRequest(int event) {
   sprintf(
     request_url,
     url_f_c,
-    url::encode(info_hash, 20).c_str(),
+    url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str(),
     url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str(),
     nPort.c_str(),
     url_left
