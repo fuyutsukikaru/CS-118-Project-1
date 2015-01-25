@@ -91,14 +91,6 @@ int Client::connectTracker() {
   ntohs(clientAddr.sin_port) << std::endl;*/
 
   while (true) {
-    /*
-    if (nTrackerResponse != NULL) {
-      fprintf(stdout, "Interval %d\n", nTrackerResponse->getInterval());
-      sleep(nTrackerResponse->getInterval());
-      delete nTrackerResponse;
-    }
-    */
-
     // send GET request to the tracker
     if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
       fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
@@ -109,7 +101,6 @@ int Client::connectTracker() {
     if (recv(sockfd, buf, sizeof(buf), 0) != -1) {
       fprintf(stdout, "Received the response!");
 
-      /*
       int buf_size = 0;
       for(; buf[buf_size] != '\0'; buf_size++);
 
@@ -121,8 +112,10 @@ int Client::connectTracker() {
       dict.wireDecode(responseStream);
       nTrackerResponse = new TrackerResponse();
       nTrackerResponse->decode(dict);
-      */
-      break;
+
+      fprintf(stdout, "Interval %d\n", nTrackerResponse->getInterval());
+      sleep(nTrackerResponse->getInterval());
+      delete nTrackerResponse;
     }
 
   }

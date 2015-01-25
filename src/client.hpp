@@ -35,6 +35,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 #include "common.hpp"
 #include "meta-info.hpp"
