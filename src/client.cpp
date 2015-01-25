@@ -22,9 +22,6 @@ enum eventTypes : int {
 };
 
 Client::Client(const std::string& port, const std::string& torrent) {
-  // Create socket using TCP IP
-  sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
   nPort = port;
 
   // Generate a randomized peer_id
@@ -48,23 +45,27 @@ Client::Client(const std::string& port, const std::string& torrent) {
  * Client connects to the tracker and sends the GET request to the tracker
  */
 int Client::connectTracker() {
-  // Connect to server using tracker's port
-  struct sockaddr_in serverAddr;
-  serverAddr.sin_family = AF_INET;
-  serverAddr.sin_port = htons(atoi(nTrackerPort.c_str()));
-  serverAddr.sin_addr.s_addr = inet_addr(TRACKER_IP);
-  memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
-
-  // Connect to the server
-  if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
-    fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
-    return RC_TRACKER_CONNECTION_FAILED;
-  }
 
   getRequest = prepareRequest(kStarted);
   int num_times = 0;
 
   while (true) {
+    // Create socket using TCP IP
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    // Connect to server using tracker's port
+    struct sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(atoi(nTrackerPort.c_str()));
+    serverAddr.sin_addr.s_addr = inet_addr(TRACKER_IP);
+    memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
+
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
+      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      return RC_TRACKER_CONNECTION_FAILED;
+    }
+
     if (nTrackerResponse != NULL) {
     }
     fprintf(stderr, "Looped %d times.\n", num_times);
@@ -107,19 +108,18 @@ int Client::connectTracker() {
         break;
       }
 
-      getRequest = prepareRequest(kStopped);
+      getRequest = prepareRequest(kIgnore);
     }
- 
+
     fprintf(stderr, "Message is: %s\n", nTrackerResponse->getFailure().c_str());
     fprintf(stderr, "Interval %d\n", nTrackerResponse->getInterval());
     sleep(nTrackerResponse->getInterval());
     //delete nTrackerResponse;
-    
+
     num_times++;
 
+    close(sockfd);
   }
-
-  close(sockfd);
 
   return 0;
 }
