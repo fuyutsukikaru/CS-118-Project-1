@@ -71,38 +71,63 @@ int Client::connectTracker() {
     return RC_TRACKER_CONNECTION_FAILED;
   }
 
- struct sockaddr_in clientAddr;
- /*clientAddr.sin_family = AF_INET;
+  //struct sockaddr_in clientAddr;
+  /*clientAddr.sin_family = AF_INET;
   clientAddr.sin_port = htons(atoi(nPort.c_str()));
   clientAddr.sin_addr.s_addr = inet_addr(CLIENT_IP);
   if (bind(sockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
     fprintf(stderr, "Failed to connect client to port: %s\n", nPort.c_str());
     return RC_CLIENT_CONNECTION_FAILED;
-  }*/
+  }
   socklen_t clientAddrLen = sizeof(clientAddr);
   if (getsockname(sockfd, (struct sockaddr*) &clientAddr, &clientAddrLen) == -1) {
     fprintf(stderr, "Failed to connect client.\n");
     return RC_CLIENT_CONNECTION_FAILED;
   }
 
-   char ipstr[INET_ADDRSTRLEN] = {'\0'};
+  char ipstr[INET_ADDRSTRLEN] = {'\0'};
   inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
   std::cout << "Set up a connection from: " << ipstr << ":" <<
-    ntohs(clientAddr.sin_port) << std::endl;
+  ntohs(clientAddr.sin_port) << std::endl;*/
 
-  // send GET request to the tracker
-  if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
-    fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
-    return RC_SEND_GET_REQUEST_FAILED;
+  while (true) {
+    /*
+    if (nTrackerResponse != NULL) {
+      fprintf(stdout, "Interval %d\n", nTrackerResponse->getInterval());
+      sleep(nTrackerResponse->getInterval());
+      delete nTrackerResponse;
+    }
+    */
+
+    // send GET request to the tracker
+    if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
+      fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      return RC_SEND_GET_REQUEST_FAILED;
+    }
+
+    char buf[1000] = {'\0'};
+    if (recv(sockfd, buf, sizeof(buf), 0) != -1) {
+      fprintf(stdout, "Received the response!");
+
+      /*
+      int buf_size = 0;
+      for(; buf[buf_size] != '\0'; buf_size++);
+
+      const char* res_body;
+      res_body = nHttpResponse.parseResponse(buf, buf_size);
+      istringstream responseStream(res_body);
+
+      bencoding::Dictionary dict;
+      dict.wireDecode(responseStream);
+      nTrackerResponse = new TrackerResponse();
+      nTrackerResponse->decode(dict);
+      */
+      break;
+    }
+
   }
 
-  /*char buf[100] = {'\0'};
-  if (recv(sockfd, buf, 100, 0) != -1) {
-    fprintf(stdout, "Received the response!");
-    break;
-  }*/
-
-  //close(sockfd);
+  close(sockfd);
 
   return 0;
 }
