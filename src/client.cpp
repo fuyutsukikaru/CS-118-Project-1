@@ -60,9 +60,11 @@ Client::~Client() {
  */
 int Client::connectTracker() {
 
+  // Prepare the request with a started event
   getRequest = prepareRequest(kStarted);
   int num_times = 0;
 
+  // Keep the client running until tracker ends client
   while (true) {
     // Create socket using TCP IP
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -80,37 +82,42 @@ int Client::connectTracker() {
       return RC_TRACKER_CONNECTION_FAILED;
     }
 
-    if (nTrackerResponse != NULL) {
-    }
     // Send GET request to the tracker
     if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
       fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
       return RC_SEND_GET_REQUEST_FAILED;
     }
 
+    // Initialize a new buffer to store the response message
     char buf[1000] = {'\0'};
     if (recv(sockfd, buf, sizeof(buf), 0) == -1) {
       fprintf(stderr, "Failed to receive a response from tracker.\n");
       return RC_NO_TRACKER_RESPONSE;
     }
 
+    // Calculate the actual size of the response message
     int buf_size = 0;
     for(; buf[buf_size] != '\0'; buf_size++);
 
+    // Check if the message was empty
     if (buf_size > 0) {
+      // Parse the response into HttpResponse and put into a istream
       const char* res_body;
       res_body = nHttpResponse->parseResponse(buf, buf_size);
       istringstream responseStream(res_body);
 
+      // Decode the dictionary obtained from the response
       bencoding::Dictionary dict;
       dict.wireDecode(responseStream);
       nTrackerResponse->decode(dict);
 
+      // Check whether the tracker responded with a fail
       if (nTrackerResponse->isFailure()) {
         fprintf(stderr, "Fail:%s\n", nTrackerResponse->getFailure().c_str());
         return RC_TRACKER_RESPONSE_FAILED;
       }
 
+      // Print the list of peers for the first response received
       if (num_times == 0) {
         std::vector<PeerInfo> peers = nTrackerResponse->getPeers();
         std::vector<PeerInfo>::iterator it = peers.begin();
@@ -119,13 +126,16 @@ int Client::connectTracker() {
         }
       }
 
+      // Prepare a new request without any events
       getRequest = prepareRequest(kIgnore);
     }
 
+    // Sleep for the interval we received from this either the previous or current response
     sleep(nTrackerResponse->getInterval());
 
     num_times++;
 
+    // Close the sockfd so that we can create a new connection for non-persistent Http requests
     close(sockfd);
   }
 
