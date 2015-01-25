@@ -21,42 +21,32 @@ enum eventTypes : int {
 };
 
 Client::Client(const std::string& port, const std::string& torrent) {
-  // create socket using TCP IP
+  // Create socket using TCP IP
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
   nPort = port;
+
+  // Generate a randomized peer_id
   nPeerId = generatePeer();
 
-  //createConnection();
-
   nInfo = new MetaInfo();
+
+  // Read the torrent file into a filestream and decode
   ifstream torrentStream(torrent, ifstream::in);
   nInfo->wireDecode(torrentStream);
+
+  // Extract the tracker_url and tracker_port from the announce
   extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort);
 
   getRequest = prepareRequest(kStarted);
 
+  // Connect to the tracker
   connectTracker();
 }
 
-int Client::createConnection() {
-  struct sockaddr_in clientAddr;
-  /*clientAddr.sin_family = AF_INET;
-  clientAddr.sin_port = htons(atoi(nPort.c_str()));
-  clientAddr.sin_addr.s_addr = inet_addr(CLIENT_IP);
-  if (bind(sockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
-    fprintf(stderr, "Failed to connect client to port: %s\n", nPort.c_str());
-    return RC_CLIENT_CONNECTION_FAILED;
-  }*/
-  socklen_t clientAddrLen = sizeof(clientAddr);
-  if (getsockname(sockfd, (struct sockaddr*) &clientAddr, &clientAddrLen) == -1) {
-    fprintf(stderr, "Failed to connect client.\n");
-    return RC_CLIENT_CONNECTION_FAILED;
-  }
-
-  return 0;
-}
-
+/*
+ * Client connects to the tracker and sends the GET request to the tracker
+ */
 int Client::connectTracker() {
   // Connect to server using tracker's port
   struct sockaddr_in serverAddr;
@@ -65,41 +55,20 @@ int Client::connectTracker() {
   serverAddr.sin_addr.s_addr = inet_addr(TRACKER_IP);
   memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
-  // connect to the server
+  // Connect to the server
   if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
     fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
     return RC_TRACKER_CONNECTION_FAILED;
   }
 
-  //struct sockaddr_in clientAddr;
-  /*clientAddr.sin_family = AF_INET;
-  clientAddr.sin_port = htons(atoi(nPort.c_str()));
-  clientAddr.sin_addr.s_addr = inet_addr(CLIENT_IP);
-  if (bind(sockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
-    fprintf(stderr, "Failed to connect client to port: %s\n", nPort.c_str());
-    return RC_CLIENT_CONNECTION_FAILED;
-  }
-  socklen_t clientAddrLen = sizeof(clientAddr);
-  if (getsockname(sockfd, (struct sockaddr*) &clientAddr, &clientAddrLen) == -1) {
-    fprintf(stderr, "Failed to connect client.\n");
-    return RC_CLIENT_CONNECTION_FAILED;
-  }
-
-  char ipstr[INET_ADDRSTRLEN] = {'\0'};
-  inet_ntop(clientAddr.sin_family, &clientAddr.sin_addr, ipstr, sizeof(ipstr));
-  std::cout << "Set up a connection from: " << ipstr << ":" <<
-  ntohs(clientAddr.sin_port) << std::endl;*/
-
   while (true) {
-    /*
     if (nTrackerResponse != NULL) {
       fprintf(stdout, "Interval %d\n", nTrackerResponse->getInterval());
       sleep(nTrackerResponse->getInterval());
       delete nTrackerResponse;
     }
-    */
 
-    // send GET request to the tracker
+    // Send GET request to the tracker
     if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
       fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
       return RC_SEND_GET_REQUEST_FAILED;
@@ -168,6 +137,7 @@ string Client::prepareRequest(int event) {
   );
   string request = request_url;
 
+  // Set up a HttpRequest and fill its parameters
   HttpRequest req;
   req.setHost(nTrackerUrl);
   req.setPort(atoi(nTrackerPort.c_str()));
