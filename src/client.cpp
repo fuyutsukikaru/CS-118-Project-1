@@ -87,11 +87,9 @@ int Client::connectTracker() {
       fprintf(stdout, "Interval %d\n", nTrackerResponse->getInterval());
       sleep(nTrackerResponse->getInterval());
       delete nTrackerResponse;
+      close(sockfd);
     }
-
   }
-
-  close(sockfd);
 
   return 0;
 }
