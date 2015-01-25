@@ -22,9 +22,9 @@ enum eventTypes : int {
 
 Client::Client(const std::string& port, const std::string& torrent) {
   nPort = port;
-  createConnection();
+  nPeerId = generatePeer();
 
-  nPeerId = "kajgelajgelkajgleajgeklajgelkajge";
+  createConnection();
 
   nInfo = new MetaInfo();
   ifstream torrentStream(torrent, ifstream::in);
@@ -148,6 +148,23 @@ int Client::extract(const string& url, string& domain, string& port) {
   }
 
   return RC_INVALID_URL;
+}
+
+/*
+ * Generates a peer_id according to the Azureus-style convention, i.e.
+ * two characters of client id and four digits of version number
+ * surrounded by hyphens, followed by twelve random numbers.
+ *
+ * More info: https://wiki.theory.org/BitTorrentSpecification#peer_id
+ */
+string Client::generatePeer() {
+  string peer_id = PEER_ID_PREFIX;
+  for (int i = 0; i < 12; i++) {
+    peer_id += to_string(rand() % 10);
+  }
+
+  cout << peer_id << endl;
+  return peer_id;
 }
 
 } // namespace sbt

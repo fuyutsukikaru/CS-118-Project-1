@@ -19,11 +19,14 @@
  * \author Yingdi Yu <yingdi@cs.ucla.edu>
  */
 
+#include <time.h>
+
 #include "client.hpp"
 
 int
 main(int argc, char** argv)
 {
+  srand(time(NULL));
   try
   {
     // Check command line arguments.

@@ -41,6 +41,8 @@
 #include "http/url-encoding.hpp"
 #include "http/http-request.hpp"
 
+#define PEER_ID_PREFIX "-CC0001-"
+
 using namespace std;
 
 namespace sbt {
@@ -56,6 +58,7 @@ public:
 
 private:
   int extract(const string& url, string& domain, string& port);
+  string generatePeer();
 
   MetaInfo* nInfo;
   int sockfd;
