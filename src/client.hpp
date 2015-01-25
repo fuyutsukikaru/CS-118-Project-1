@@ -62,7 +62,7 @@ public:
   string prepareRequest(int event);
 
 private:
-  int extract(const string& url, string& domain, string& port);
+  int extract(const string& url, string& domain, string& port, string& endpoint);
   string generatePeer();
 
   MetaInfo* nInfo;
@@ -71,6 +71,7 @@ private:
   string nPeerId;
   string nTrackerUrl;
   string nTrackerPort;
+  string nTrackerEndpoint;
   string getRequest;
 
   HttpResponse* nHttpResponse;

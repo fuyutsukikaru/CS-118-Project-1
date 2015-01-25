@@ -36,7 +36,7 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nInfo->wireDecode(torrentStream);
 
   // Extract the tracker_url and tracker_port from the announce
-  extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort);
+  extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort, nTrackerEndpoint);
 
 
   // Connect to the tracker
@@ -137,7 +137,7 @@ int Client::connectTracker() {
  * Takes in an event type and returns the prepared request.
  */
 string Client::prepareRequest(int event) {
-  string url_f = "/announce.php?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
+  string url_f = "/%s?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
   const char* url_hash = url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str();
   const char* url_id = url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str();
 
@@ -163,6 +163,7 @@ string Client::prepareRequest(int event) {
   sprintf(
     request_url,
     url_f_c,
+    nTrackerEndpoint.c_str(),
     url_hash,
     url_id,
     nPort.c_str(),
@@ -191,7 +192,7 @@ string Client::prepareRequest(int event) {
  * Extracts a host and port number from the given url.
  * Returns RC_INVALID_URL if parsing failed and 0 otherwise.
  */
-int Client::extract(const string& url, string& domain, string& port) {
+int Client::extract(const string& url, string& domain, string& port, string& endpoint) {
   size_t first = url.find("://");
   if (first != string::npos) {
     first += 3;
@@ -202,7 +203,7 @@ int Client::extract(const string& url, string& domain, string& port) {
         domain = url.substr(first, second - first);
         second += 1;
         port = url.substr(second, third - second);
-
+        endpoint = url.substr(third + 1, url.size());
         return 0;
       }
     }
