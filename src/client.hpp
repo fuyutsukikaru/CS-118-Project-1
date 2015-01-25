@@ -40,6 +40,8 @@
 #include "meta-info.hpp"
 #include "http/url-encoding.hpp"
 #include "http/http-request.hpp"
+#include "http/http-response.hpp"
+#include "tracker-response.hpp"
 
 #define PEER_ID_PREFIX "-CC0001-"
 
@@ -67,6 +69,9 @@ private:
   string nTrackerUrl;
   string nTrackerPort;
   string getRequest;
+
+  HttpResponse nHttpResponse;
+  TrackerResponse* nTrackerResponse;
 };
 
 } // namespace sbt
