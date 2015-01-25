@@ -66,7 +66,7 @@ private:
   string nPeerId;
   string nTrackerUrl;
   string nTrackerPort;
-  char* getRequest;
+  string getRequest;
 };
 
 } // namespace sbt

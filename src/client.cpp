@@ -23,7 +23,7 @@ enum eventTypes : int {
 Client::Client(const std::string& port, const std::string& torrent) {
   // create socket using TCP IP
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
-  
+
   nPort = port;
   nPeerId = generatePeer();
 
@@ -34,10 +34,7 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nInfo->wireDecode(torrentStream);
   extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort);
 
-  string temp = prepareRequest(kStarted);
-  getRequest = new char[temp.length() + 1];
-  strcpy(getRequest, temp.c_str());
-  fprintf(stderr, "%s\n", getRequest);
+  getRequest = prepareRequest(kStarted);
 
   connectTracker();
 }
@@ -94,7 +91,7 @@ int Client::connectTracker() {
     ntohs(clientAddr.sin_port) << std::endl;
 
   // send GET request to the tracker
-  if (send(sockfd, getRequest, sizeof(getRequest), 0) == -1) {
+  if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
     fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
     return RC_SEND_GET_REQUEST_FAILED;
   }
@@ -115,7 +112,7 @@ int Client::connectTracker() {
  * Takes in an event type and returns the prepared request.
  */
 string Client::prepareRequest(int event) {
-  string url_f = "https://localhost:12345/announce.php?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
+  string url_f = "/announce.php?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
 
   const uint8_t *info_hash = nInfo->getHash()->get();
   int url_left = nInfo->getLength();
