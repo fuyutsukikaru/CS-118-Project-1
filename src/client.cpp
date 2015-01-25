@@ -28,6 +28,9 @@ Client::Client(const std::string& port, const std::string& torrent)
     nInfo = new MetaInfo();
     ifstream torrentStream(torrent, ifstream::in);
     nInfo->wireDecode(torrentStream);
+    fprintf(stdout, "%s\n", (nInfo->getAnnounce()).c_str());
+    extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort);
+
     string temp = prepareRequest(kStarted);
     getRequest = new char[temp.length() + 1];
     strcpy(getRequest, temp.c_str());
@@ -55,7 +58,7 @@ int Client::connectTracker() {
   // Connect to server using tracker's port
   struct sockaddr_in serverAddr;
   serverAddr.sin_family = AF_INET;
-  serverAddr.sin_port = htons(nTrackerPort);
+  serverAddr.sin_port = htons(atoi(nTrackerPort.c_str()));
   serverAddr.sin_addr.s_addr = inet_addr(TRACKER_IP);
   memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
@@ -107,7 +110,7 @@ string Client::prepareRequest(int event) {
 
   HttpRequest req;
   req.setHost(nTrackerUrl);
-  req.setPort(nTrackerPort);
+  req.setPort(atoi(nPort.c_str()));
   req.setMethod(HttpRequest::GET);
   req.setVersion("1.0");
   req.setPath(request);
@@ -119,6 +122,26 @@ string Client::prepareRequest(int event) {
 
   request = buf;
   return request;
+}
+
+int Client::extract(const string& url, string& domain, string& port) {
+  size_t first = url.find("://");
+  if (first != string::npos) {
+    first += 3;
+    size_t second = url.find(":", first);
+    if (second != string::npos) {
+      size_t third = url.find("/", second);
+      if (third != string::npos) {
+        domain = url.substr(first, second - first);
+        second += 1;
+        port = url.substr(second, third - second);
+
+        return 0;
+      }
+    }
+  }
+
+  return RC_INVALID_URL;
 }
 
 } // namespace sbt

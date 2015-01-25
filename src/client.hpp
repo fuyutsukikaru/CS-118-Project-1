@@ -41,24 +41,28 @@
 #include "http/url-encoding.hpp"
 #include "http/http-request.hpp"
 
+using namespace std;
+
 namespace sbt {
 
 class Client
 {
 public:
-  Client(const std::string& port, const std::string& torrent);
+  Client(const string& port, const string& torrent);
 
   int createConnection();
   int connectTracker();
-  std::string prepareRequest(int event);
+  string prepareRequest(int event);
 
 private:
+  int extract(const string& url, string& domain, string& port);
+
   MetaInfo* nInfo;
   int sockfd;
-  std::string nPort;
-  std::string nPeerId;
-  std::string nTrackerUrl;
-  unsigned short nTrackerPort;
+  string nPort;
+  string nPeerId;
+  string nTrackerUrl;
+  string nTrackerPort;
   char* getRequest;
 };
 

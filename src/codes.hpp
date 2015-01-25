@@ -16,5 +16,7 @@
 const int RC_CLIENT_CONNECTION_FAILED     = -1001;
 const int RC_TRACKER_CONNECTION_FAILED    = -1002;
 const int RC_SEND_GET_REQUEST_FAILED      = -1003;
+const int RC_INVALID_URL                  = -1004;
+
 
 #endif // CODES_HPP
