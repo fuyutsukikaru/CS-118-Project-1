@@ -55,6 +55,8 @@ class Client
 public:
   Client(const string& port, const string& torrent);
 
+  ~Client();
+
   int createConnection();
   int connectTracker();
   string prepareRequest(int event);
@@ -71,7 +73,7 @@ private:
   string nTrackerPort;
   string getRequest;
 
-  HttpResponse nHttpResponse;
+  HttpResponse* nHttpResponse;
   TrackerResponse* nTrackerResponse;
 };
 

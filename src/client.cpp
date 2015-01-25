@@ -28,6 +28,8 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nPeerId = generatePeer();
 
   nInfo = new MetaInfo();
+  nHttpResponse = new HttpResponse();
+  nTrackerResponse = new TrackerResponse();
 
   // Read the torrent file into a filestream and decode
   ifstream torrentStream(torrent, ifstream::in);
@@ -39,6 +41,12 @@ Client::Client(const std::string& port, const std::string& torrent) {
 
   // Connect to the tracker
   connectTracker();
+}
+
+Client::~Client() {
+  delete nHttpResponse;
+  delete nTrackerResponse;
+  delete nInfo;
 }
 
 /*
@@ -90,24 +98,22 @@ int Client::connectTracker() {
 
     if (buf_size > 0) {
       const char* res_body;
-      res_body = nHttpResponse.parseResponse(buf, buf_size);
+      res_body = nHttpResponse->parseResponse(buf, buf_size);
       istringstream responseStream(res_body);
 
       bencoding::Dictionary dict;
       dict.wireDecode(responseStream);
-      nTrackerResponse = new TrackerResponse();
       nTrackerResponse->decode(dict);
 
       if (nTrackerResponse->isFailure()) {
         fprintf(stderr, "Fail:%s\n", nTrackerResponse->getFailure().c_str());
         break;
       }
-      
+
       if (num_times == 0) {
         std::vector<PeerInfo> peers = nTrackerResponse->getPeers();
         std::vector<PeerInfo>::iterator it = peers.begin();
         for (; it != peers.end(); it++) {
-          //fprintf(stdout, "%s:%d\n", it->ip.c_str(), it->port);
           cout << it->ip << ":" << it->port << endl;
         }
       }
@@ -116,7 +122,6 @@ int Client::connectTracker() {
     }
 
     sleep(nTrackerResponse->getInterval());
-    //delete nTrackerResponse;
 
     num_times++;
 
@@ -132,6 +137,8 @@ int Client::connectTracker() {
  */
 string Client::prepareRequest(int event) {
   string url_f = "/announce.php?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
+  const char* url_hash = url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str();
+  const char* url_id = url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str();
 
   int url_left = nInfo->getLength();
 
@@ -155,8 +162,8 @@ string Client::prepareRequest(int event) {
   sprintf(
     request_url,
     url_f_c,
-    url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str(),
-    url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str(),
+    url_hash,
+    url_id,
     nPort.c_str(),
     url_left
   );
