@@ -43,6 +43,12 @@ Client::Client(const std::string& port, const std::string& torrent) {
 
 /*
  * Client connects to the tracker and sends the GET request to the tracker
+ * Since we are using HTTP/1.0, we need to, for every request
+ * - initialize the socket
+ * - establish the connection
+ * - send the message
+ * - receive/parse/decode the response
+ * - close the connection
  */
 int Client::connectTracker() {
 
