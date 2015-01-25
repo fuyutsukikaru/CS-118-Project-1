@@ -107,7 +107,8 @@ int Client::connectTracker() {
         std::vector<PeerInfo> peers = nTrackerResponse->getPeers();
         std::vector<PeerInfo>::iterator it = peers.begin();
         for (; it != peers.end(); it++) {
-          fprintf(stdout, "%s:%d\n", it->ip.c_str(), it->port);
+          //fprintf(stdout, "%s:%d\n", it->ip.c_str(), it->port);
+          cout << it->ip << ":" << it->port << endl;
         }
       }
 
