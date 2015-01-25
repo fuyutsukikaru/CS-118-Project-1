@@ -68,32 +68,21 @@ int Client::connectTracker() {
 
     if (nTrackerResponse != NULL) {
     }
-    fprintf(stderr, "Looped %d times.\n", num_times);
-
-    fprintf(stderr, "Preparing to send message: %s\n", getRequest.c_str());
-
     // Send GET request to the tracker
     if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
       fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
       return RC_SEND_GET_REQUEST_FAILED;
     }
 
-    fprintf(stderr, "Sent request, waiting to receive.\n");
-
     char buf[1000] = {'\0'};
     if (recv(sockfd, buf, sizeof(buf), 0) == -1) {
       fprintf(stderr, "Failed to receive a response from tracker.\n");
     }
 
-    fprintf(stderr, "We're not stalling.\n");
-
     int buf_size = 0;
     for(; buf[buf_size] != '\0'; buf_size++);
 
-    fprintf(stderr, "Size of the buffer is: %d\n", buf_size);
-
     if (buf_size > 0) {
-      fprintf(stderr, "We received a message.\n");
       const char* res_body;
       res_body = nHttpResponse.parseResponse(buf, buf_size);
       istringstream responseStream(res_body);
@@ -104,15 +93,21 @@ int Client::connectTracker() {
       nTrackerResponse->decode(dict);
 
       if (nTrackerResponse->isFailure()) {
-        fprintf(stderr, "Tracker responded with a fail.\n");
+        fprintf(stderr, "Fail:%s\n", nTrackerResponse->getFailure().c_str());
         break;
+      }
+      
+      if (num_times == 0) {
+        std::vector<PeerInfo> peers = nTrackerResponse->getPeers();
+        std::vector<PeerInfo>::iterator it = peers.begin();
+        for (; it != peers.end(); it++) {
+          fprintf(stdout, "%s:%d\n", it->ip.c_str(), it->port);
+        }
       }
 
       getRequest = prepareRequest(kIgnore);
     }
 
-    fprintf(stderr, "Message is: %s\n", nTrackerResponse->getFailure().c_str());
-    fprintf(stderr, "Interval %d\n", nTrackerResponse->getInterval());
     sleep(nTrackerResponse->getInterval());
     //delete nTrackerResponse;
 
