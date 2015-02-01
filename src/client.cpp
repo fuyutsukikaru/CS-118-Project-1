@@ -260,6 +260,7 @@ int Client::extract(const string& url, string& domain, string& port, string& end
  * Generates a peer_id according to the Azureus-style convention, i.e.
  * two characters of client id and four digits of version number
  * surrounded by hyphens, followed by twelve random numbers.
+ * If the SIMPLEBT_TEST flag is enabled, always returns the test peer id.
  *
  * More info: https://wiki.theory.org/BitTorrentSpecification#peer_id
  */
@@ -269,7 +270,7 @@ string Client::generatePeer() {
     peer_id += to_string(rand() % 10);
   }
 
-  return peer_id;
+  return SIMPLEBT_TEST ? TEST_PEER_ID : peer_id;
 }
 
 } // namespace sbt
