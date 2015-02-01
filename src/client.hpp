@@ -60,7 +60,6 @@ enum eventTypes : int {
   kStopped = 2
 };
 
-
 class Client
 {
 public:
@@ -70,7 +69,7 @@ public:
 
   int createConnection();
   int connectTracker();
-  string prepareRequest(int event = kIgnore);
+  int prepareRequest(string& request, int event = kIgnore);
 
 private:
   int extract(const string& url, string& domain, string& port, string& endpoint);

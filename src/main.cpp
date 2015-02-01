@@ -40,8 +40,6 @@ main(int argc, char** argv)
 
     // Initialise the client.
     sbt::Client client(argv[1], argv[2]);
-
-    client.prepareRequest(0);
   }
   catch (std::exception& e)
   {

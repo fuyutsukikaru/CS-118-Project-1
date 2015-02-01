@@ -18,6 +18,8 @@ namespace sbt {
 
 Client::Client(const std::string& port, const std::string& torrent) {
   nPort = port;
+  nDownloaded = 0;
+  nUploaded = 0;
 
   // Generate a randomized peer_id
   nPeerId = generatePeer();
@@ -55,7 +57,7 @@ Client::~Client() {
 int Client::connectTracker() {
 
   // Prepare the request with a started event
-  getRequest = prepareRequest(kStarted);
+  prepareRequest(getRequest, kStarted);
   int num_times = 0;
 
   // Retrieve the tracker's IP address
@@ -125,7 +127,7 @@ int Client::connectTracker() {
       }
 
       // Prepare a new request without any events
-      getRequest = prepareRequest();
+      prepareRequest(getRequest);
     }
 
     // Sleep for the interval we received from this either the previous or current response
@@ -173,7 +175,7 @@ int Client::resolveHost(string& url, string& ip) {
  * Formats and prepares a GET request to the tracker's announce url.
  * Takes in an event type and returns the prepared request.
  */
-string Client::prepareRequest(int event /*= kIgnore*/) {
+int Client::prepareRequest(string& request, int event /*= kIgnore*/) {
   string url_f = "/%s?info_hash=%s&peer_id=%s&port=%s&uploaded=%d&downloaded=%d&left=%d";
   const char* url_hash = url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str();
   const char* url_id = url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str();
@@ -208,7 +210,7 @@ string Client::prepareRequest(int event /*= kIgnore*/) {
     nDownloaded,
     url_left
   );
-  string request = request_url;
+  string path = request_url;
 
   // Set up a HttpRequest and fill its parameters
   HttpRequest req;
@@ -216,7 +218,7 @@ string Client::prepareRequest(int event /*= kIgnore*/) {
   req.setPort(atoi(nTrackerPort.c_str()));
   req.setMethod(HttpRequest::GET);
   req.setVersion("1.0");
-  req.setPath(request);
+  req.setPath(path);
   req.addHeader("Accept-Language", "en-US");
 
   size_t req_length = req.getTotalLength();
@@ -224,7 +226,7 @@ string Client::prepareRequest(int event /*= kIgnore*/) {
   req.formatRequest(buf);
 
   request = buf;
-  return request;
+  return 0;
 }
 
 /*
