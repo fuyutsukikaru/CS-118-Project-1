@@ -26,6 +26,7 @@
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -33,6 +34,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include <iostream>
 #include <fstream>
@@ -75,8 +77,10 @@ public:
 private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
   int resolveHost(string& url, string& ip);
+  int fck();
   string generatePeer();
 
+  int fd;
   int sockfd;
   int nDownloaded;
   int nUploaded;

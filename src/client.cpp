@@ -31,6 +31,7 @@ Client::Client(const std::string& port, const std::string& torrent) {
   // Read the torrent file into a filestream and decode
   ifstream torrentStream(torrent, ifstream::in);
   nInfo->wireDecode(torrentStream);
+  fck();
 
   // Extract the tracker_url and tracker_port from the announce
   extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort, nTrackerEndpoint);
@@ -43,6 +44,32 @@ Client::~Client() {
   delete nHttpResponse;
   delete nTrackerResponse;
   delete nInfo;
+}
+
+/*
+ * Checks if file exists or not. If it doesn't, allocates space for it.
+ * If it does, checks existing file against pieces and rellaocate as necessary.
+ */
+int Client::fck() {
+  struct stat buffer;
+  int rc;
+  if ((rc = stat((nInfo->getName()).c_str(), &buffer)) == 0) { // file exists
+    if (nDownloaded > nInfo->getLength()) {
+      fd = open((nInfo->getName()).c_str(), O_RDWR);
+      if (ftruncate(fd, nDownloaded) != 0) {
+        fprintf(stderr, "%s\n", "File truncation failed");
+        return RC_FILE_ALLOCATE_FAILED;
+      }
+    }
+  } else {
+    fd = open((nInfo->getName()).c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    if ((rc = posix_fallocate(fd, 0, nInfo->getLength())) != 0) {
+      fprintf(stderr, "File allocate error: %d\n", rc);
+      return RC_FILE_ALLOCATE_FAILED;
+    }
+  }
+
+  return 0;
 }
 
 int Client::bindClient(string& clientPort, string ipaddr) {
