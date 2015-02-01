@@ -38,7 +38,6 @@ Client::Client(const std::string& port, const std::string& torrent) {
   // Extract the tracker_url and tracker_port from the announce
   extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort, nTrackerEndpoint);
 
-
   // Connect to the tracker
   connectTracker();
 }
@@ -64,6 +63,10 @@ int Client::connectTracker() {
   getRequest = prepareRequest(kStarted);
   int num_times = 0;
 
+  // Retrieve the tracker's IP address
+  string tip;
+  resolveHost(nTrackerUrl, tip);
+
   // Keep the client running until tracker ends client
   while (true) {
     // Create socket using TCP IP
@@ -73,7 +76,7 @@ int Client::connectTracker() {
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(atoi(nTrackerPort.c_str()));
-    serverAddr.sin_addr.s_addr = inet_addr(TRACKER_IP);
+    serverAddr.sin_addr.s_addr = inet_addr(tip.c_str());
     memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
     // Connect to the server
@@ -139,6 +142,35 @@ int Client::connectTracker() {
     close(sockfd);
   }
 
+  return 0;
+}
+
+/*
+ * Resolves the tracker's hostname to its IP address.
+ * Returns RC_GET_ADDRESS_INFO_FAILED upon failure. This requires a socket to
+ * have been set up prior to calling.
+ */
+int Client::resolveHost(string& url, string& ip) {
+  struct addrinfo hints, *res, *p;
+  struct sockaddr_in *h;
+  int rv;
+
+  memset(&hints, 0, sizeof(hints));
+  hints.ai_family = AF_INET; // uses IPv4, can force IPv6 if necessary
+  hints.ai_socktype = SOCK_STREAM;
+
+  if ((rv = getaddrinfo(url.c_str(), nTrackerPort.c_str(), &hints, &res)) != 0) {
+    fprintf(stderr, "Error getting address info: %s\n", gai_strerror(rv));
+    return RC_GET_ADDRESS_INFO_FAILED;
+  }
+
+  // Connect to first possible result
+  for (p = res; p != NULL; p = p->ai_next) {
+    h = (struct sockaddr_in *)p->ai_addr;
+    ip = inet_ntoa(h->sin_addr);
+  }
+
+  freeaddrinfo(res);
   return 0;
 }
 

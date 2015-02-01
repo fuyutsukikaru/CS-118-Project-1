@@ -28,6 +28,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <string.h>
 #include <stdio.h>
 #include <errno.h>
@@ -63,9 +64,9 @@ public:
 
 private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
+  int resolveHost(string& url, string& ip);
   string generatePeer();
 
-  MetaInfo* nInfo;
   int sockfd;
   string nPort;
   string nPeerId;
@@ -74,6 +75,7 @@ private:
   string nTrackerEndpoint;
   string getRequest;
 
+  MetaInfo* nInfo;
   HttpResponse* nHttpResponse;
   TrackerResponse* nTrackerResponse;
 };

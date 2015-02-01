@@ -19,6 +19,6 @@ const int RC_SEND_GET_REQUEST_FAILED      = -1003;
 const int RC_NO_TRACKER_RESPONSE          = -1004;
 const int RC_TRACKER_RESPONSE_FAILED      = -1005;
 const int RC_INVALID_URL                  = -1006;
-
+const int RC_GET_ADDRESS_INFO_FAILED      = -1007;
 
 #endif // CODES_HPP
