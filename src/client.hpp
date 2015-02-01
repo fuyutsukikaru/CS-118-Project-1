@@ -67,6 +67,7 @@ public:
 
   ~Client();
 
+  int bindClient(string& clientPort, string ipaddr);
   int createConnection();
   int connectTracker();
   int prepareRequest(string& request, int event = kIgnore);
@@ -90,6 +91,7 @@ private:
   MetaInfo* nInfo;
   HttpResponse* nHttpResponse;
   TrackerResponse* nTrackerResponse;
+  vector<PeerInfo> peers;
 };
 
 } // namespace sbt

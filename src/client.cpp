@@ -45,6 +45,21 @@ Client::~Client() {
   delete nInfo;
 }
 
+int Client::bindClient(string& clientPort, string ipaddr) {
+  int clientSockfd = socket(AF_INET, SOCK_STREAM, 0);
+  struct sockaddr_in clientAddr;
+  clientAddr.sin_family = AF_INET;
+  clientAddr.sin_port = htons(atoi(clientPort.c_str()));
+  clientAddr.sin_addr.s_addr = inet_addr(ipaddr.c_str());
+  memset(clientAddr.sin_zero, '\0', sizeof(clientAddr.sin_zero));
+
+  if (bind(clientSockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
+    return RC_CLIENT_CONNECTION_FAILED;
+  }
+
+  return 0;
+}
+
 /*
  * Client connects to the tracker and sends the GET request to the tracker
  * Since we are using HTTP/1.0, we need to, for every request
@@ -63,6 +78,7 @@ int Client::connectTracker() {
   // Retrieve the tracker's IP address
   string tip;
   resolveHost(nTrackerUrl, tip);
+  bindClient(nPort, CLIENT_IP);
 
   // Keep the client running until tracker ends client
   while (true) {
@@ -118,13 +134,13 @@ int Client::connectTracker() {
       }
 
       // Print the list of peers for the first response received
-      if (num_times == 0) {
+      /*if (num_times == 0) {
         std::vector<PeerInfo> peers = nTrackerResponse->getPeers();
         std::vector<PeerInfo>::iterator it = peers.begin();
         for (; it != peers.end(); it++) {
           cout << it->ip << ":" << it->port << endl;
         }
-      }
+      }*/
 
       // Prepare a new request without any events
       prepareRequest(getRequest);
