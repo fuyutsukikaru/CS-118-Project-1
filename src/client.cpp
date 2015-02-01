@@ -73,14 +73,21 @@ int Client::fck() {
   return 0;
 }
 
+/*
+ *  Binds the client to the specified IP address and port.
+ */
 int Client::bindClient(string& clientPort, string ipaddr) {
+  // Create a new socket for the client
   int clientSockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+  // Initiailize the client address information
   struct sockaddr_in clientAddr;
   clientAddr.sin_family = AF_INET;
   clientAddr.sin_port = htons(atoi(clientPort.c_str()));
   clientAddr.sin_addr.s_addr = inet_addr(ipaddr.c_str());
   memset(clientAddr.sin_zero, '\0', sizeof(clientAddr.sin_zero));
 
+  // Bind the client to the port
   if (bind(clientSockfd, (struct sockaddr*) &clientAddr, sizeof(clientAddr)) == -1) {
     return RC_CLIENT_CONNECTION_FAILED;
   }
