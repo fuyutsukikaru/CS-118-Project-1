@@ -1,0 +1,17 @@
+Project 1 Part 1
+
+Team:
+
+Soomin Jeong
+UID: 304-116-854
+I set up the sockets and connections, and extracted the peer list
+
+Jeffrey Wang
+UID: 104-148-158
+I parsed and decoded the tracker response and wrote the code to repeatedly set
+up the connection and send GET request
+
+James Wu
+UID: 204-135-990
+I wrote all the functions to format the GET request, including extracting
+host and port number from a given URL

@@ -5,6 +5,8 @@
  * Public License (GPL).
  *
  * @date 1/24/2015
+ * @author Soomin Jeong <sjeongus@ucla.edu>
+ * @author Jeffrey Wang <oojeffree@g.ucla.edu>
  * @author James Wu <wuzhonglin@ucla.edu>
  */
 
