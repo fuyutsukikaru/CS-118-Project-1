@@ -31,7 +31,8 @@ Client::Client(const std::string& port, const std::string& torrent) {
   // Read the torrent file into a filestream and decode
   ifstream torrentStream(torrent, ifstream::in);
   nInfo->wireDecode(torrentStream);
-  fck();
+
+  nRemaining = nInfo->getLength();
 
   // Extract the tracker_url and tracker_port from the announce
   extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort, nTrackerEndpoint);
@@ -223,8 +224,6 @@ int Client::prepareRequest(string& request, int event /*= kIgnore*/) {
   const char* url_hash = url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str();
   const char* url_id = url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str();
 
-  int url_left = nInfo->getLength();
-
   string url_event = "";
   switch(event) {
     case kStarted:
@@ -238,7 +237,6 @@ int Client::prepareRequest(string& request, int event /*= kIgnore*/) {
       break;
   }
   url_f += url_event;
-  url_left = 0;
 
   const char* url_f_c = url_f.c_str();
   char request_url[BUFFER_SIZE];
@@ -251,7 +249,7 @@ int Client::prepareRequest(string& request, int event /*= kIgnore*/) {
     nPort.c_str(),
     nUploaded,
     nDownloaded,
-    url_left
+    nRemaining
   );
   string path = request_url;
 

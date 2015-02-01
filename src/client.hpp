@@ -84,6 +84,7 @@ private:
   int sockfd;
   int nDownloaded;
   int nUploaded;
+  int nRemaining;
 
   string nPort;
   string nPeerId;
