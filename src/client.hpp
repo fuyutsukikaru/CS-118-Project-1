@@ -53,6 +53,14 @@ using namespace std;
 
 namespace sbt {
 
+enum eventTypes : int {
+  kIgnore = -1,
+  kStarted = 0,
+  kCompleted = 1,
+  kStopped = 2
+};
+
+
 class Client
 {
 public:
@@ -62,7 +70,7 @@ public:
 
   int createConnection();
   int connectTracker();
-  string prepareRequest(int event);
+  string prepareRequest(int event = kIgnore);
 
 private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
@@ -70,6 +78,9 @@ private:
   string generatePeer();
 
   int sockfd;
+  int nDownloaded;
+  int nUploaded;
+
   string nPort;
   string nPeerId;
   string nTrackerUrl;

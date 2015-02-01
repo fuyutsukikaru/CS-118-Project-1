@@ -16,13 +16,6 @@ using namespace std;
 
 namespace sbt {
 
-enum eventTypes : int {
-  kStarted = 0,
-  kCompleted = 1,
-  kStopped = 2,
-  kIgnore = 3
-};
-
 Client::Client(const std::string& port, const std::string& torrent) {
   nPort = port;
 
@@ -132,7 +125,7 @@ int Client::connectTracker() {
       }
 
       // Prepare a new request without any events
-      getRequest = prepareRequest(kIgnore);
+      getRequest = prepareRequest();
     }
 
     // Sleep for the interval we received from this either the previous or current response
@@ -180,8 +173,8 @@ int Client::resolveHost(string& url, string& ip) {
  * Formats and prepares a GET request to the tracker's announce url.
  * Takes in an event type and returns the prepared request.
  */
-string Client::prepareRequest(int event) {
-  string url_f = "/%s?info_hash=%s&peer_id=%s&port=%s&uploaded=0&downloaded=0&left=%d";
+string Client::prepareRequest(int event /*= kIgnore*/) {
+  string url_f = "/%s?info_hash=%s&peer_id=%s&port=%s&uploaded=%d&downloaded=%d&left=%d";
   const char* url_hash = url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str();
   const char* url_id = url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str();
 
@@ -211,6 +204,8 @@ string Client::prepareRequest(int event) {
     url_hash,
     url_id,
     nPort.c_str(),
+    nUploaded,
+    nDownloaded,
     url_left
   );
   string request = request_url;
