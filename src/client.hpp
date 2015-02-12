@@ -37,6 +37,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include <map>
+#include <utility>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -47,6 +49,8 @@
 #include "http/http-request.hpp"
 #include "http/http-response.hpp"
 #include "util/hash.hpp"
+#include "msg/msg-base.hpp"
+#include "msg/handshake.hpp"
 #include "tracker-response.hpp"
 
 #define SIMPLEBT_TEST true
@@ -56,6 +60,9 @@
 using namespace std;
 
 namespace sbt {
+
+// uniquely identify peers through <ip, port>
+typedef pair<string, string> pAttr;
 
 enum eventTypes : int {
   kIgnore = -1,
@@ -80,6 +87,7 @@ private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
   int resolveHost(string& url, string& ip);
   int fck();
+  int parseMessage(ConstBufferPtr msg, pAttr peer);
   string generatePeer();
 
   int sockfd;
@@ -95,6 +103,10 @@ private:
   string getRequest;
 
   vector<uint8_t> nBitfield;
+
+  // maps peer attributes to the message id of the last
+  // message sent to them
+  map<pAttr, msg::MsgId> lastRektMsgType;
 
   MetaInfo* nInfo;
   HttpResponse* nHttpResponse;

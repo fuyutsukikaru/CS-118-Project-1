@@ -331,6 +331,36 @@ int Client::extract(const string& url, string& domain, string& port, string& end
 }
 
 /*
+ * Generic function for handling all incoming messages received
+ * by the client. Differentiates between handshakes and any
+ * other kind of message, and takes appropriate actions to respond.
+ */
+int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
+  try {
+    msg::HandShake *handshake = new msg::HandShake();
+    handshake->decode(msg);
+  } catch (msg::Error e) { // was not a handshake
+    switch (lastRektMsgType[peer]) {
+      case msg::MSG_ID_INTERESTED: // expect unchoke
+        break;
+      case msg::MSG_ID_HAVE: // expect request
+      case msg::MSG_ID_UNCHOKE:
+        break;
+      case msg::MSG_ID_BITFIELD: // expect bitfield if not already received
+        break;
+      case msg::MSG_ID_REQUEST: // expect piece
+        break;
+      case msg::MSG_ID_PIECE: // expect request
+        break;
+      default:
+        break;
+    }
+
+    // always expect have or interested
+  }
+}
+
+/*
  * Generates a peer_id according to the Azureus-style convention, i.e.
  * two characters of client id and four digits of version number
  * surrounded by hyphens, followed by twelve random numbers.
