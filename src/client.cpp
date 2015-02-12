@@ -46,6 +46,9 @@ Client::~Client() {
   delete nHttpResponse;
   delete nTrackerResponse;
   delete nInfo;
+
+  close(sockfd);
+  close(clientSockfd);
 }
 
 /*
@@ -107,7 +110,7 @@ int Client::fck() {
  */
 int Client::bindClient(string& clientPort, string ipaddr) {
   // Create a new socket for the client
-  int clientSockfd = socket(AF_INET, SOCK_STREAM, 0);
+  clientSockfd = socket(AF_INET, SOCK_STREAM, 0);
 
   // Initiailize the client address information
   struct sockaddr_in clientAddr;
@@ -146,21 +149,10 @@ int Client::connectTracker() {
 
   // Keep the client running until tracker ends client
   while (true) {
-    // Create socket using TCP IP
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-    // Connect to server using tracker's port
     struct sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(atoi(nTrackerPort.c_str()));
-    serverAddr.sin_addr.s_addr = inet_addr(tip.c_str());
-    memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
-
-    // Connect to the server
-    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
-      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
-      return RC_TRACKER_CONNECTION_FAILED;
-    }
+    // Create socket and connect to port using TCP IP
+    createConnection(tip, nTrackerPort, sockfd, serverAddr);
 
     // Send GET request to the tracker
     if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
@@ -197,14 +189,13 @@ int Client::connectTracker() {
         return RC_TRACKER_RESPONSE_FAILED;
       }
 
-      // Print the list of peers for the first response received
-      /*if (num_times == 0) {
-        std::vector<PeerInfo> peers = nTrackerResponse->getPeers();
-        std::vector<PeerInfo>::iterator it = peers.begin();
-        for (; it != peers.end(); it++) {
-          cout << it->ip << ":" << it->port << endl;
-        }
-      }*/
+      peers = nTrackerResponse->getPeers();
+      vector<PeerInfo>::iterator it = peers.begin();
+      for (; it != peers.end(); it++) {
+        int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
+        prepareHandshake(peerSockfd, nInfo->getHash(), *it, serverAddr);
+        sockArray.push_back(peerSockfd);
+      }
 
       // Prepare a new request without any events
       prepareRequest(getRequest);
@@ -217,6 +208,59 @@ int Client::connectTracker() {
 
     // Close the sockfd so that we can create a new connection for non-persistent Http requests
     close(sockfd);
+  }
+
+  return 0;
+}
+
+int Client::createConnection(string ip, string port, int &sockfd, struct sockaddr_in &serverAddr) {
+    // Create socket using TCP IP
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    // Connect to server using tracker's port
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(atoi(port.c_str()));
+    serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
+    memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
+
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
+      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      return RC_TRACKER_CONNECTION_FAILED;
+    }
+
+    return 0;
+}
+
+int Client::createConnection(string ip, uint16_t port, int &sockfd, struct sockaddr_in &serverAddr) {
+    // Create socket using TCP IP
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    // Connect to server using tracker's port
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(port);
+    serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
+    memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
+
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
+      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      return RC_TRACKER_CONNECTION_FAILED;
+    }
+
+    return 0;
+}
+
+int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer, struct sockaddr_in &serverAddr) {
+  nHandshake = new msg::HandShake(infoHash, peer.peerId);
+  ConstBufferPtr encodedShake = nHandshake->encode();
+
+  createConnection(peer.ip, peer.port, sockfd, serverAddr);
+
+  // Send GET request to pper
+  if (send(sockfd, encodedShake->buf(), sizeof(encodedShake->buf()), 0) == -1) {
+    fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+    return RC_SEND_GET_REQUEST_FAILED;
   }
 
   return 0;

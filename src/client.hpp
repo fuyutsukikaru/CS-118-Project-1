@@ -52,6 +52,7 @@
 #include "msg/msg-base.hpp"
 #include "msg/handshake.hpp"
 #include "tracker-response.hpp"
+#include "msg/handshake.hpp"
 
 #define SIMPLEBT_TEST true
 #define PEER_ID_PREFIX "-CC0001-"
@@ -79,9 +80,11 @@ public:
   ~Client();
 
   int bindClient(string& clientPort, string ipaddr);
-  int createConnection();
+  int createConnection(string ip, string port, int &sockfd, struct sockaddr_in &serverAddr);
+  int createConnection(string ip, uint16_t port, int &sockfd, struct sockaddr_in &serverAddr);
   int connectTracker();
   int prepareRequest(string& request, int event = kIgnore);
+  int prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer, struct sockaddr_in &serverAddr);
 
 private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
@@ -91,6 +94,7 @@ private:
   string generatePeer();
 
   int sockfd;
+  int clientSockfd;
   int nDownloaded;
   int nUploaded;
   int nRemaining;
@@ -103,6 +107,7 @@ private:
   string getRequest;
 
   vector<uint8_t> nBitfield;
+  vector<int> sockArray;
 
   // maps peer attributes to the message id of the last
   // message sent to them
@@ -112,6 +117,7 @@ private:
   HttpResponse* nHttpResponse;
   TrackerResponse* nTrackerResponse;
   vector<PeerInfo> peers;
+  msg::HandShake* nHandshake;
 };
 
 } // namespace sbt
