@@ -33,6 +33,7 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nInfo->wireDecode(torrentStream);
 
   nRemaining = nInfo->getLength();
+  fck();
 
   // Extract the tracker_url and tracker_port from the announce
   extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort, nTrackerEndpoint);
@@ -53,21 +54,49 @@ Client::~Client() {
  */
 int Client::fck() {
   struct stat buffer;
-  int rc;
-  if ((rc = stat((nInfo->getName()).c_str(), &buffer)) == 0) { // file exists
-    if (nDownloaded > nInfo->getLength()) {
-      fd = open((nInfo->getName()).c_str(), O_RDWR);
-      if (ftruncate(fd, nDownloaded) != 0) {
-        fprintf(stderr, "%s\n", "File truncation failed");
+  FILE *fd;
+
+  vector<uint8_t>::iterator begin, end;
+  vector<uint8_t> pieces = nInfo->getPieces();
+
+  fd = fopen((nInfo->getName()).c_str(), "a+");
+  if (fd) {
+    stat((nInfo->getName()).c_str(), &buffer);
+    int size = nInfo->getLength() > nDownloaded ? nInfo->getLength() : nDownloaded;
+
+    if (buffer.st_size < size) {
+      if (ftruncate(fileno(fd), size) != 0) {
+        fprintf(stderr, "File truncation failed: %d\n", errno);
         return RC_FILE_ALLOCATE_FAILED;
       }
     }
-  } else {
-    fd = open((nInfo->getName()).c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    if ((rc = posix_fallocate(fd, 0, nInfo->getLength())) != 0) {
-      fprintf(stderr, "File allocate error: %d\n", rc);
-      return RC_FILE_ALLOCATE_FAILED;
+
+    // go through each piece in the file and compare the hash
+    begin = pieces.begin();
+    end = begin + PIECE_HASH;
+
+    int piece_hash_count = pieces.size() / PIECE_HASH;
+    int pieces_left = piece_hash_count;
+
+    char *piece = new char[nInfo->getPieceLength()];
+    while (!feof(fd)) {
+      vector<uint8_t> c_piece(begin, end);
+      size_t length = fread(piece, sizeof(char) * nInfo->getPieceLength(), 1, fd);
+      ConstBufferPtr piece_hash = util::sha1(make_shared<sbt::Buffer>(piece, length));
+
+      if (*piece_hash == c_piece) {
+        fprintf(stderr, "Piece %d validated\n", piece_hash_count - pieces_left);
+
+        // set bitfield
+      }
+
+      pieces_left--;
+      begin += PIECE_HASH;
+      end += PIECE_HASH;
     }
+  } else {
+    fprintf(stderr, "File allocate error: %d\n", errno);
+    return RC_FILE_ALLOCATE_FAILED;
   }
 
   return 0;

@@ -23,6 +23,7 @@
 #define SBT_CLIENT_HPP
 
 #define BUFFER_SIZE 4096
+#define PIECE_HASH  20
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -45,6 +46,7 @@
 #include "http/url-encoding.hpp"
 #include "http/http-request.hpp"
 #include "http/http-response.hpp"
+#include "util/hash.hpp"
 #include "tracker-response.hpp"
 
 #define SIMPLEBT_TEST true
@@ -80,7 +82,6 @@ private:
   int fck();
   string generatePeer();
 
-  int fd;
   int sockfd;
   int nDownloaded;
   int nUploaded;
@@ -92,6 +93,8 @@ private:
   string nTrackerPort;
   string nTrackerEndpoint;
   string getRequest;
+
+  vector<uint8_t> nBitfield;
 
   MetaInfo* nInfo;
   HttpResponse* nHttpResponse;
