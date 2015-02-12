@@ -146,21 +146,9 @@ int Client::connectTracker() {
 
   // Keep the client running until tracker ends client
   while (true) {
-    // Create socket using TCP IP
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-    // Connect to server using tracker's port
-    struct sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(atoi(nTrackerPort.c_str()));
-    serverAddr.sin_addr.s_addr = inet_addr(tip.c_str());
-    memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
-
-    // Connect to the server
-    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
-      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
-      return RC_TRACKER_CONNECTION_FAILED;
-    }
+    // Create socket and connect to port using TCP IP
+    createConnection(tip, nTrackerPort, sockfd);
 
     // Send GET request to the tracker
     if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
@@ -220,6 +208,24 @@ int Client::connectTracker() {
   }
 
   return 0;
+}
+
+int Client::createConnection(string ip, string port, int &sockfd) {
+    // Create socket using TCP IP
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    // Connect to server using tracker's port
+    struct sockaddr_in serverAddr;
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(atoi(port.c_str()));
+    serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
+    memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
+
+    // Connect to the server
+    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
+      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      return RC_TRACKER_CONNECTION_FAILED;
+    }
 }
 
 /*
