@@ -20,6 +20,7 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nPort = port;
   nDownloaded = 0;
   nUploaded = 0;
+  trackerLooped = false;
 
   // Generate a randomized peer_id
   nPeerId = generatePeer();
@@ -189,12 +190,38 @@ int Client::connectTracker() {
         return RC_TRACKER_RESPONSE_FAILED;
       }
 
-      peers = nTrackerResponse->getPeers();
-      vector<PeerInfo>::iterator it = peers.begin();
-      for (; it != peers.end(); it++) {
-        int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
-        prepareHandshake(peerSockfd, nInfo->getHash(), *it, serverAddr);
-        sockArray.push_back(peerSockfd);
+      if (trackerLooped == false) {
+        peers = nTrackerResponse->getPeers();
+        vector<PeerInfo>::iterator it = peers.begin();
+        for (; it != peers.end(); it++) {
+          int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
+          prepareHandshake(peerSockfd, nInfo->getHash(), *it, serverAddr);
+          sockArray.push_back(peerSockfd);
+          socketToPeer[peerSockfd] = *it;
+        }
+
+        trackerLooped = true;
+      }
+
+      vector<int>::iterator it = sockArray.begin();
+      for (; it != sockArray.end(); it++) {
+        // Initialize a new buffer to store the Handshake response
+        char hs_buf[1000] = {'\0'};
+        if (recv(*it, hs_buf, sizeof(hs_buf), 0) == -1) {
+          fprintf(stderr, "Failed to receive a response from peer.\n");
+          return RC_NO_TRACKER_RESPONSE;
+        }
+
+        // Calculate the actual size of the response message
+        int hs_buf_size = 0;
+        for(; hs_buf[hs_buf_size] != '\0'; hs_buf_size++);
+
+        ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, hs_buf_size);
+
+        string t_pip = socketToPeer[*it].ip;
+        int t_pport = socketToPeer[*it].port;
+        pAttr t_pAttr(t_pip, t_pport);
+        parseMessage(hs_res, t_pAttr);
       }
 
       // Prepare a new request without any events

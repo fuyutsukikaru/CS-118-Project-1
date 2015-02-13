@@ -63,7 +63,7 @@ using namespace std;
 namespace sbt {
 
 // uniquely identify peers through <ip, port>
-typedef pair<string, string> pAttr;
+typedef pair<string, int> pAttr;
 
 enum eventTypes : int {
   kIgnore = -1,
@@ -99,6 +99,8 @@ private:
   int nUploaded;
   int nRemaining;
 
+  bool trackerLooped;
+
   string nPort;
   string nPeerId;
   string nTrackerUrl;
@@ -112,6 +114,7 @@ private:
   // maps peer attributes to the message id of the last
   // message sent to them
   map<pAttr, msg::MsgId> lastRektMsgType;
+  map<int, PeerInfo> socketToPeer;
 
   MetaInfo* nInfo;
   HttpResponse* nHttpResponse;
