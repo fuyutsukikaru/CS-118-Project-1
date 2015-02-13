@@ -48,7 +48,6 @@ Client::~Client() {
   delete nTrackerResponse;
   delete nInfo;
 
-  close(sockfd);
   close(clientSockfd);
 }
 
@@ -125,6 +124,32 @@ int Client::bindClient(string& clientPort, string ipaddr) {
     return RC_CLIENT_CONNECTION_FAILED;
   }
 
+  // Listen on this socket
+  if (listen(clientSockfd, 1) == -1) {
+    fprintf(stderr, "Cannot listen on port: %s\n", nPort.c_str());
+    return RC_CLIENT_CONNECTION_FAILED;
+  }
+
+  // Accept a connection
+  struct sockaddr_in peerAddr;
+  socklen_t peerAddrLen;
+  int peerSockfd = accept(clientSockfd, (struct sockaddr*) &peerAddr, &peerAddrLen);
+
+  if (peerSockfd == -1) {
+    fprintf(stderr, "Could not accept connection from peer\n");
+    // return RC_PEER_ACCEPT_FAILED;
+    return 0;
+  }
+
+  fprintf(stdout, "Received a connection from the peer with ip:port %d:%d\n", peerAddr.sin_addr.s_addr, peerAddr.sin_port);
+
+  /*HandShake* tempHandshake = new HandShake();
+
+  sockArray.push_back(peerSockfd);
+  PeerInfo tempPeer = new PeerInfo();
+  tempPeer.ip = peerAddr.
+  tempPeer.port = peerAddr.sin_port;*/
+
   return 0;
 }
 
@@ -151,13 +176,13 @@ int Client::connectTracker() {
   // Keep the client running until tracker ends client
   while (true) {
 
-    struct sockaddr_in serverAddr;
+    //fprintf(stderr, "Started connecting to the tracker\n");
     // Create socket and connect to port using TCP IP
-    createConnection(tip, nTrackerPort, sockfd, serverAddr);
+    createConnection(tip, nTrackerPort, sockfd);
 
     // Send GET request to the tracker
     if (send(sockfd, getRequest.c_str(), getRequest.size(), 0) == -1) {
-      fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      fprintf(stderr, "Failed to send GET request to tracker at port: %s\n", nTrackerPort.c_str());
       return RC_SEND_GET_REQUEST_FAILED;
     }
 
@@ -194,10 +219,14 @@ int Client::connectTracker() {
         peers = nTrackerResponse->getPeers();
         vector<PeerInfo>::iterator it = peers.begin();
         for (; it != peers.end(); it++) {
-          int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
-          prepareHandshake(peerSockfd, nInfo->getHash(), *it, serverAddr);
-          sockArray.push_back(peerSockfd);
-          socketToPeer[peerSockfd] = *it;
+          cout << it->ip << ":" << it->port << endl;
+          if (it->port != atoi(nPort.c_str())) {
+            int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
+            fprintf(stderr, "Setting up handshake with a peer\n");
+            prepareHandshake(peerSockfd, nInfo->getHash(), *it);
+            sockArray.push_back(peerSockfd);
+            socketToPeer[peerSockfd] = *it;
+          }
         }
 
         trackerLooped = true;
@@ -240,11 +269,12 @@ int Client::connectTracker() {
   return 0;
 }
 
-int Client::createConnection(string ip, string port, int &sockfd, struct sockaddr_in &serverAddr) {
+int Client::createConnection(string ip, string port, int &sockfd) {
     // Create socket using TCP IP
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     // Connect to server using tracker's port
+    struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(atoi(port.c_str()));
     serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
@@ -252,18 +282,19 @@ int Client::createConnection(string ip, string port, int &sockfd, struct sockadd
 
     // Connect to the server
     if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
-      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      fprintf(stderr, "Failed to connect to port: %d\n", serverAddr.sin_port);
       return RC_TRACKER_CONNECTION_FAILED;
     }
 
     return 0;
 }
 
-int Client::createConnection(string ip, uint16_t port, int &sockfd, struct sockaddr_in &serverAddr) {
+int Client::createConnection(string ip, uint16_t port, int &sockfd) {
     // Create socket using TCP IP
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
 
     // Connect to server using tracker's port
+    struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
     serverAddr.sin_port = htons(port);
     serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
@@ -278,15 +309,19 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd, struct socka
     return 0;
 }
 
-int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer, struct sockaddr_in &serverAddr) {
-  nHandshake = new msg::HandShake(infoHash, peer.peerId);
+int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer) {
+  nHandshake = new msg::HandShake(infoHash, nPeerId);
   ConstBufferPtr encodedShake = nHandshake->encode();
 
-  createConnection(peer.ip, peer.port, sockfd, serverAddr);
+  fprintf(stderr, "Initiating handshake with the peers\n");
+  //createConnection(peer.ip, peer.port, sockfd);
+  createConnection(peer.ip, "11111", sockfd);
 
-  // Send GET request to pper
-  if (send(sockfd, encodedShake->buf(), sizeof(encodedShake->buf()), 0) == -1) {
-    fprintf(stderr, "Failed to send GET request to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+  const char* shakeMsg = reinterpret_cast<const char*>(encodedShake->buf());
+
+  // Send handshake to pper
+  if (send(sockfd, shakeMsg, sizeof(shakeMsg), 0) == -1) {
+    fprintf(stderr, "Failed to send handshake to port: %d\n", peer.port);
     return RC_SEND_GET_REQUEST_FAILED;
   }
 

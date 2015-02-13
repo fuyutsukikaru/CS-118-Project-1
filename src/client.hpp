@@ -80,11 +80,11 @@ public:
   ~Client();
 
   int bindClient(string& clientPort, string ipaddr);
-  int createConnection(string ip, string port, int &sockfd, struct sockaddr_in &serverAddr);
-  int createConnection(string ip, uint16_t port, int &sockfd, struct sockaddr_in &serverAddr);
+  int createConnection(string ip, string port, int &sockfd);
+  int createConnection(string ip, uint16_t port, int &sockfd);
   int connectTracker();
   int prepareRequest(string& request, int event = kIgnore);
-  int prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer, struct sockaddr_in &serverAddr);
+  int prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer);
 
 private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
