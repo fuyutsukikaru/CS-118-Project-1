@@ -92,12 +92,19 @@ private:
   int fck();
   int parseMessage(ConstBufferPtr msg, pAttr peer);
   string generatePeer();
+  void initBitfield();
 
   int sockfd;
   int clientSockfd;
   int nDownloaded;
   int nUploaded;
   int nRemaining;
+
+  // functions for sending messages
+  int sendBitfield(pAttr peer);
+
+  // functions for dealing with messages
+  int handleBitfield(ConstBufferPtr msg, pAttr peer);
 
   bool trackerLooped;
 
@@ -107,14 +114,15 @@ private:
   string nTrackerPort;
   string nTrackerEndpoint;
   string getRequest;
+  char* nBitfield;
 
-  vector<uint8_t> nBitfield;
   vector<int> sockArray;
 
   // maps peer attributes to the message id of the last
   // message sent to them
   map<pAttr, msg::MsgId> lastRektMsgType;
   map<int, PeerInfo> socketToPeer;
+  map<pAttr, char*> peerBitfields;
 
   MetaInfo* nInfo;
   HttpResponse* nHttpResponse;

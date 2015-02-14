@@ -29,6 +29,10 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nHttpResponse = new HttpResponse();
   nTrackerResponse = new TrackerResponse();
 
+  // Initialize bitfield
+  initBitfield();
+  cout << nBitfield << endl;
+
   // Read the torrent file into a filestream and decode
   ifstream torrentStream(torrent, ifstream::in);
   nInfo->wireDecode(torrentStream);
@@ -103,6 +107,15 @@ int Client::fck() {
   }
 
   return 0;
+}
+
+/*
+ * Initializes the client's bitfield to all zeroes. Requires that the torrent
+ * metainfo have been parsed first.
+ */
+void Client::initBitfield() {
+  int piece_count = nInfo->getPieces().size();
+  nBitfield = new char[piece_count]();
 }
 
 /*
@@ -256,7 +269,7 @@ int Client::connectTracker() {
       }
       //ssize_t n_buf_size = recv(*it, hs_buf, sizeof(hs_buf), 0);
       //fprintf(stderr, "error code: %d\n", errno);
-      fprintf(stderr, "buffer has length of %d\n", n_buf_size);
+      fprintf(stderr, "buffer has length of %d\n", (int)n_buf_size);
       // Calculate the actual size of the response message
       //int hs_buf_size = 0;
       //for(; hs_buf[hs_buf_size] != '\0'; hs_buf_size++);
@@ -465,6 +478,7 @@ int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
     msg::HandShake *handshake = new msg::HandShake();
     handshake->decode(msg);
     fprintf(stderr, "The peer's peer id is %s\n", (handshake->getPeerId()).c_str());
+    sendBitfield(peer);
   } catch (msg::Error e) { // was not a handshake
     switch (lastRektMsgType[peer]) {
       case msg::MSG_ID_INTERESTED: // expect unchoke
@@ -473,6 +487,7 @@ int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
       case msg::MSG_ID_UNCHOKE:
         break;
       case msg::MSG_ID_BITFIELD: // expect bitfield if not already received
+        handleBitfield(msg, peer);
         break;
       case msg::MSG_ID_REQUEST: // expect piece
         break;
@@ -484,6 +499,18 @@ int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
 
     // always expect have or interested
   }
+
+  return 0;
+}
+
+int Client::sendBitfield(pAttr peer) {
+
+
+  return 0;
+}
+
+int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
+  return 0;
 }
 
 /*
