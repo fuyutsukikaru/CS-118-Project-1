@@ -106,8 +106,6 @@ private:
   // functions for dealing with messages
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
 
-  bool trackerLooped;
-
   string nPort;
   string nPeerId;
   string nTrackerUrl;
@@ -121,8 +119,13 @@ private:
   // maps peer attributes to the message id of the last
   // message sent to them
   map<pAttr, msg::MsgId> lastRektMsgType;
+
+  // maps socket to the peer that is connected to it
   map<int, PeerInfo> socketToPeer;
   map<pAttr, char*> peerBitfields;
+
+  // maps peer attributes to whether we have sent to them
+  map<pAttr, bool> hasPeerConnected;
 
   MetaInfo* nInfo;
   HttpResponse* nHttpResponse;
