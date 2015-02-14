@@ -105,6 +105,7 @@ private:
 
   // functions for sending messages
   int sendBitfield(pAttr peer);
+  int receiveBitfield(pAttr peer);
 
   // functions for dealing with messages
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
@@ -116,6 +117,7 @@ private:
   string nTrackerEndpoint;
   string getRequest;
   uint8_t* nBitfield;
+  int nFieldSize;
 
   vector<int> sockArray;
 
@@ -125,6 +127,7 @@ private:
 
   // maps socket to the peer that is connected to it
   map<int, PeerInfo> socketToPeer;
+  //map<pAttr, int> peerToSocket;
 
   map<pAttr, char*> peerBitfields;
 

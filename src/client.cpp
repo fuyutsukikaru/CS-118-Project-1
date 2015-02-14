@@ -114,6 +114,10 @@ int Client::fck() {
 void Client::initBitfield() {
   int piece_count = nInfo->getPieces().size();
   //nBitfield = new uint8_t[(piece_count / 8) + 1];
+  nFieldSize = (piece_count / 8) + 1;
+  uint8_t tempBitfield[nFieldSize];
+  memset(tempBitfield, 0, sizeof(tempBitfield));
+  nBitfield = tempBitfield;
 }
 
 /*
@@ -249,6 +253,7 @@ int Client::connectTracker() {
           prepareHandshake(peerSockfd, nInfo->getHash(), *it);
           sockArray.push_back(peerSockfd);
           socketToPeer[peerSockfd] = *it;
+          //peerToSocket[t_pAttr] = peerSockfd;
 
           hasPeerConnected[t_pAttr] = true;
         }
@@ -260,8 +265,7 @@ int Client::connectTracker() {
     vector<int>::iterator it = sockArray.begin();
     for (; it != sockArray.end(); it++) {
       // Initialize a new buffer to store the Handshake response
-      cout << "recv" << endl;
-      char hs_buf[1000] = {'\0'};
+      char hs_buf[100000] = {'\0'};
       ssize_t n_buf_size = 0;
       if ((n_buf_size = recv(*it, hs_buf, sizeof(hs_buf), 0)) == -1) {
         fprintf(stderr, "Failed to receive a response from peer.\n");
@@ -271,17 +275,13 @@ int Client::connectTracker() {
       //fprintf(stderr, "error code: %d\n", errno);
       fprintf(stderr, "buffer has length of %d\n", (int)n_buf_size);
       // Calculate the actual size of the response message
-      //int hs_buf_size = 0;
-      //for(; hs_buf[hs_buf_size] != '\0'; hs_buf_size++);
+      ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
 
-      //if (hs_buf_size > 0) {
-        ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
-
-        string t_pip = socketToPeer[*it].ip;
-        int t_pport = socketToPeer[*it].port;
-        pAttr t_pAttr(t_pip, t_pport);
-        parseMessage(hs_res, t_pAttr);
-      //}
+      sockfd = *it;
+      string t_pip = socketToPeer[*it].ip;
+      int t_pport = socketToPeer[*it].port;
+      pAttr t_pAttr(t_pip, t_pport);
+      parseMessage(hs_res, t_pAttr);
     }
 
     // Prepare a new request without any events
@@ -344,8 +344,9 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd) {
 int Client::sendPayload(msg::MsgBase& payload, pAttr peer) {
   ConstBufferPtr enc_msg = payload.encode();
   const char* b_msg = reinterpret_cast<const char*>(enc_msg->buf());
-  createConnection(peer.first, peer.second, sockfd);
-  if (send(sockfd, b_msg, sizeof(b_msg), 0) < 0) {
+  //int sockfd = peerToSocket.find(peer)->second;
+  //createConnection(peer.first, peer.second, sockfd);
+  if (send(sockfd, b_msg, nFieldSize, 0) < 0) {
     fprintf(stderr, "Failed to send payload to peer %s:%d\n", peer.first.c_str(), peer.second);
     return RC_SEND_GET_REQUEST_FAILED;
   }
@@ -363,7 +364,7 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
 
   const char* shakeMsg = reinterpret_cast<const char*>(encodedShake->buf());
 
-  // Send handshake to pper
+  // Send handshake to peer
   if (send(sockfd, shakeMsg, 68, 0) == -1) {
     fprintf(stderr, "Failed to send handshake to port: %d\n", peer.port);
     return RC_SEND_GET_REQUEST_FAILED;
@@ -491,6 +492,7 @@ int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
     handshake->decode(msg);
     fprintf(stderr, "The peer's peer id is %s\n", (handshake->getPeerId()).c_str());
     sendBitfield(peer);
+    receiveBitfield(peer);
   } catch (msg::Error e) { // was not a handshake
     switch (lastRektMsgType[peer]) {
       case msg::MSG_ID_INTERESTED: // expect unchoke
@@ -519,10 +521,25 @@ int Client::sendBitfield(pAttr peer) {
   ConstBufferPtr msg = make_shared<sbt::Buffer>(nBitfield, sizeof(nBitfield) - 1);
   msg::Bitfield bitfield_msg = msg::Bitfield(msg);
   sendPayload(bitfield_msg, peer);
+
+  lastRektMsgType[peer] = msg::MSG_ID_BITFIELD;
   return 0;
 }
 
 int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
+  return 0;
+}
+
+int Client::receiveBitfield(pAttr peer) {
+  //int sockfd = peerToSocket.find(peer)->second;
+  char hs_buf[1000] = {'\0'};
+  ssize_t n_buf_size = 0;
+  if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
+    fprintf(stderr, "Failed to receive a bitfield from peer.\n");
+    return RC_NO_TRACKER_RESPONSE;
+  }
+  fprintf(stderr, "bitfield has length of %d\n", (int)n_buf_size);
+
   return 0;
 }
 
