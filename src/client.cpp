@@ -111,6 +111,11 @@ int Client::fck() {
 int Client::bindClient(string& clientPort, string ipaddr) {
   // Create a new socket for the client
   clientSockfd = socket(AF_INET, SOCK_STREAM, 0);
+  int yes = 1;
+  if (setsockopt(clientSockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+    fprintf(stderr, "Could not set socket options\n");
+    return RC_CLIENT_CONNECTION_FAILED;
+  }
 
   // Initialize the client address information
   struct sockaddr_in clientAddr;
@@ -237,30 +242,37 @@ int Client::connectTracker() {
         trackerLooped = true;
       }
 
-      vector<int>::iterator it = sockArray.begin();
-      for (; it != sockArray.end(); it++) {
-        // Initialize a new buffer to store the Handshake response
-        char hs_buf[1000] = {'\0'};
-        if (recv(*it, hs_buf, sizeof(hs_buf), 0) == -1) {
-          fprintf(stderr, "Failed to receive a response from peer.\n");
-          return RC_NO_TRACKER_RESPONSE;
-        }
-cout << "buffer has: " << hs_buf << endl;
-        // Calculate the actual size of the response message
-        int hs_buf_size = 0;
-        for(; hs_buf[hs_buf_size] != '\0'; hs_buf_size++);
+      prepareRequest(getRequest);
+    }
 
-        ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, hs_buf_size);
+    vector<int>::iterator it = sockArray.begin();
+    for (; it != sockArray.end(); it++) {
+      // Initialize a new buffer to store the Handshake response
+      char hs_buf[1000] = {'\0'};
+      ssize_t n_buf_size = 0;
+      if ((n_buf_size = recv(*it, hs_buf, sizeof(hs_buf), 0)) == -1) {
+        fprintf(stderr, "Failed to receive a response from peer.\n");
+        return RC_NO_TRACKER_RESPONSE;
+      }
+      //ssize_t n_buf_size = recv(*it, hs_buf, sizeof(hs_buf), 0);
+      //fprintf(stderr, "error code: %d\n", errno);
+      fprintf(stderr, "buffer has length of %d\n", n_buf_size);
+      // Calculate the actual size of the response message
+      //int hs_buf_size = 0;
+      //for(; hs_buf[hs_buf_size] != '\0'; hs_buf_size++);
+
+      //if (hs_buf_size > 0) {
+        ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
 
         string t_pip = socketToPeer[*it].ip;
         int t_pport = socketToPeer[*it].port;
         pAttr t_pAttr(t_pip, t_pport);
         parseMessage(hs_res, t_pAttr);
-      }
-
-      // Prepare a new request without any events
-      prepareRequest(getRequest);
+      //}
     }
+
+    // Prepare a new request without any events
+    //prepareRequest(getRequest);
 
     // Sleep for the interval we received from this either the previous or current response
     sleep(nTrackerResponse->getInterval());
@@ -286,9 +298,8 @@ int Client::createConnection(string ip, string port, int &sockfd) {
     memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
     // Connect to the server
-    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
-      fprintf(stderr, "Failed to connect to port: %d\n", serverAddr.sin_port);
-      cout << "tracker port is " << port << endl;
+    if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) != 0) {
+      fprintf(stderr, "Failed to connect to tracker port: %d\n", serverAddr.sin_port);
       return RC_TRACKER_CONNECTION_FAILED;
     }
 
@@ -306,9 +317,11 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd) {
     serverAddr.sin_addr.s_addr = inet_addr(ip.c_str());
     memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));
 
+    fprintf(stderr, "Peer I am connecting to has port of %d\n", port);
+
     // Connect to the server
     if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
-      fprintf(stderr, "Failed to connect to tracker at port: %d\n", ntohs(serverAddr.sin_port));
+      fprintf(stderr, "Failed to connect to peer port: %d\n", serverAddr.sin_port);
       return RC_TRACKER_CONNECTION_FAILED;
     }
 
@@ -320,13 +333,13 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
   ConstBufferPtr encodedShake = nHandshake->encode();
 
   fprintf(stderr, "Initiating handshake with the peers\n");
-  //createConnection(peer.ip, peer.port, sockfd);
-  createConnection(peer.ip, "11111", sockfd);
+  createConnection(peer.ip, peer.port, sockfd);
+  //createConnection(peer.ip, "11111", sockfd);
 
   const char* shakeMsg = reinterpret_cast<const char*>(encodedShake->buf());
 
   // Send handshake to pper
-  if (send(sockfd, shakeMsg, sizeof(shakeMsg), 0) == -1) {
+  if (send(sockfd, shakeMsg, 68, 0) == -1) {
     fprintf(stderr, "Failed to send handshake to port: %d\n", peer.port);
     return RC_SEND_GET_REQUEST_FAILED;
   }
@@ -451,6 +464,7 @@ int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
   try {
     msg::HandShake *handshake = new msg::HandShake();
     handshake->decode(msg);
+    fprintf(stderr, "The peer's peer id is %s\n", (handshake->getPeerId()).c_str());
   } catch (msg::Error e) { // was not a handshake
     switch (lastRektMsgType[peer]) {
       case msg::MSG_ID_INTERESTED: // expect unchoke
