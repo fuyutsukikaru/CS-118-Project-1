@@ -99,8 +99,6 @@ private:
   int nUploaded;
   int nRemaining;
 
-  bool trackerLooped;
-
   string nPort;
   string nPeerId;
   string nTrackerUrl;
@@ -114,7 +112,12 @@ private:
   // maps peer attributes to the message id of the last
   // message sent to them
   map<pAttr, msg::MsgId> lastRektMsgType;
+
+  // maps socket to the peer that is connected to it
   map<int, PeerInfo> socketToPeer;
+
+  // maps peer attributes to whether we have sent to them
+  map<pAttr, bool> hasPeerConnected;
 
   MetaInfo* nInfo;
   HttpResponse* nHttpResponse;

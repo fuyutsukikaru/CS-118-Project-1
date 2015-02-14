@@ -20,7 +20,6 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nPort = port;
   nDownloaded = 0;
   nUploaded = 0;
-  trackerLooped = false;
 
   // Generate a randomized peer_id
   nPeerId = generatePeer();
@@ -225,21 +224,22 @@ int Client::connectTracker() {
         return RC_TRACKER_RESPONSE_FAILED;
       }
 
-      if (trackerLooped == false) {
-        peers = nTrackerResponse->getPeers();
-        vector<PeerInfo>::iterator it = peers.begin();
-        for (; it != peers.end(); it++) {
-          cout << it->ip << ":" << it->port << endl;
-          if (it->port != atoi(nPort.c_str())) {
-            int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
-            fprintf(stderr, "Setting up handshake with a peer\n");
-            prepareHandshake(peerSockfd, nInfo->getHash(), *it);
-            sockArray.push_back(peerSockfd);
-            socketToPeer[peerSockfd] = *it;
-          }
-        }
+      peers = nTrackerResponse->getPeers();
+      vector<PeerInfo>::iterator it = peers.begin();
+      for (; it != peers.end(); it++) {
+        string t_pip = it->ip;
+        int t_pport = it->port;
+        pAttr t_pAttr(t_pip, t_pport);
+        cout << it->ip << ":" << it->port << endl;
+        if (it->port != atoi(nPort.c_str()) && hasPeerConnected.find(t_pAttr) == hasPeerConnected.end()) {
+          int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
+          fprintf(stderr, "Setting up handshake with a peer\n");
+          prepareHandshake(peerSockfd, nInfo->getHash(), *it);
+          sockArray.push_back(peerSockfd);
+          socketToPeer[peerSockfd] = *it;
 
-        trackerLooped = true;
+          hasPeerConnected[t_pAttr] = true;
+        }
       }
 
       prepareRequest(getRequest);
