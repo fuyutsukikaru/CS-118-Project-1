@@ -112,7 +112,7 @@ int Client::bindClient(string& clientPort, string ipaddr) {
   // Create a new socket for the client
   clientSockfd = socket(AF_INET, SOCK_STREAM, 0);
 
-  // Initiailize the client address information
+  // Initialize the client address information
   struct sockaddr_in clientAddr;
   clientAddr.sin_family = AF_INET;
   clientAddr.sin_port = htons(atoi(clientPort.c_str()));
@@ -134,14 +134,19 @@ int Client::bindClient(string& clientPort, string ipaddr) {
   struct sockaddr_in peerAddr;
   socklen_t peerAddrLen;
   int peerSockfd = accept(clientSockfd, (struct sockaddr*) &peerAddr, &peerAddrLen);
-
+cout << "accepted" << endl;
   if (peerSockfd == -1) {
     fprintf(stderr, "Could not accept connection from peer\n");
     // return RC_PEER_ACCEPT_FAILED;
     return 0;
+  } else {
+    char buf[BUFFER_SIZE] = {'\0'};
+    if (recv(peerSockfd, buf, sizeof(buf), 0) == -1) {
+      fprintf(stderr, "Failed to receive a response from tracker.\n");
+      return RC_NO_TRACKER_RESPONSE;
+    }
+    fprintf(stdout, "Received a connection from the peer with ip:port %d:%d\n", peerAddr.sin_addr.s_addr, peerAddr.sin_port);
   }
-
-  fprintf(stdout, "Received a connection from the peer with ip:port %d:%d\n", peerAddr.sin_addr.s_addr, peerAddr.sin_port);
 
   /*HandShake* tempHandshake = new HandShake();
 
@@ -240,7 +245,7 @@ int Client::connectTracker() {
           fprintf(stderr, "Failed to receive a response from peer.\n");
           return RC_NO_TRACKER_RESPONSE;
         }
-
+cout << "buffer has: " << hs_buf << endl;
         // Calculate the actual size of the response message
         int hs_buf_size = 0;
         for(; hs_buf[hs_buf_size] != '\0'; hs_buf_size++);
@@ -283,6 +288,7 @@ int Client::createConnection(string ip, string port, int &sockfd) {
     // Connect to the server
     if (connect(sockfd, (struct sockaddr*) &serverAddr, sizeof(serverAddr)) == -1) {
       fprintf(stderr, "Failed to connect to port: %d\n", serverAddr.sin_port);
+      cout << "tracker port is " << port << endl;
       return RC_TRACKER_CONNECTION_FAILED;
     }
 

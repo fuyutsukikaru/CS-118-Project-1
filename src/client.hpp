@@ -56,7 +56,7 @@
 
 #define SIMPLEBT_TEST true
 #define PEER_ID_PREFIX "-CC0001-"
-#define TEST_PEER_ID "SIMPLEBT-TEST-PEERID"
+#define TEST_PEER_ID "SIMPLEBT.TEST.PEERID"
 
 using namespace std;
 
