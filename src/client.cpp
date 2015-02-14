@@ -28,13 +28,12 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nHttpResponse = new HttpResponse();
   nTrackerResponse = new TrackerResponse();
 
-  // Initialize bitfield
-  initBitfield();
-  cout << nBitfield << endl;
-
   // Read the torrent file into a filestream and decode
   ifstream torrentStream(torrent, ifstream::in);
   nInfo->wireDecode(torrentStream);
+
+  // Initialize bitfield
+  initBitfield();
 
   nRemaining = nInfo->getLength();
   fck();
@@ -114,7 +113,7 @@ int Client::fck() {
  */
 void Client::initBitfield() {
   int piece_count = nInfo->getPieces().size();
-  nBitfield = new char[piece_count]();
+  //nBitfield = new uint8_t[(piece_count / 8) + 1];
 }
 
 /*
@@ -261,6 +260,7 @@ int Client::connectTracker() {
     vector<int>::iterator it = sockArray.begin();
     for (; it != sockArray.end(); it++) {
       // Initialize a new buffer to store the Handshake response
+      cout << "recv" << endl;
       char hs_buf[1000] = {'\0'};
       ssize_t n_buf_size = 0;
       if ((n_buf_size = recv(*it, hs_buf, sizeof(hs_buf), 0)) == -1) {
@@ -339,6 +339,18 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd) {
     }
 
     return 0;
+}
+
+int Client::sendPayload(msg::MsgBase& payload, pAttr peer) {
+  ConstBufferPtr enc_msg = payload.encode();
+  const char* b_msg = reinterpret_cast<const char*>(enc_msg->buf());
+  createConnection(peer.first, peer.second, sockfd);
+  if (send(sockfd, b_msg, sizeof(b_msg), 0) < 0) {
+    fprintf(stderr, "Failed to send payload to peer %s:%d\n", peer.first.c_str(), peer.second);
+    return RC_SEND_GET_REQUEST_FAILED;
+  }
+
+  return 0;
 }
 
 int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer) {
@@ -504,8 +516,9 @@ int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
 }
 
 int Client::sendBitfield(pAttr peer) {
-
-
+  ConstBufferPtr msg = make_shared<sbt::Buffer>(nBitfield, sizeof(nBitfield) - 1);
+  msg::Bitfield bitfield_msg = msg::Bitfield(msg);
+  sendPayload(bitfield_msg, peer);
   return 0;
 }
 

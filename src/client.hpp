@@ -100,6 +100,8 @@ private:
   int nUploaded;
   int nRemaining;
 
+  int sendPayload(msg::MsgBase& payload, pAttr peer);
+
   // functions for sending messages
   int sendBitfield(pAttr peer);
 
@@ -112,7 +114,7 @@ private:
   string nTrackerPort;
   string nTrackerEndpoint;
   string getRequest;
-  char* nBitfield;
+  uint8_t* nBitfield;
 
   vector<int> sockArray;
 
@@ -122,6 +124,7 @@ private:
 
   // maps socket to the peer that is connected to it
   map<int, PeerInfo> socketToPeer;
+
   map<pAttr, char*> peerBitfields;
 
   // maps peer attributes to whether we have sent to them
