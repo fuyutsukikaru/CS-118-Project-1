@@ -85,6 +85,7 @@ public:
   int connectTracker();
   int prepareRequest(string& request, int event = kIgnore);
   int prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer);
+  int sendUnchoke(pAttr peer);
 
 private:
   int extract(const string& url, string& domain, string& port, string& endpoint);

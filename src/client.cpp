@@ -526,6 +526,13 @@ int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
   return 0;
 }
 
+// Proof of concept
+int Client::sendUnchoke(pAttr peer) {
+  msg::Unchoke *unchoke = new msg::Unchoke();
+  sendPayload(*unchoke, peer);
+  return 0;
+}
+
 /*
  * Generates a peer_id according to the Azureus-style convention, i.e.
  * two characters of client id and four digits of version number
