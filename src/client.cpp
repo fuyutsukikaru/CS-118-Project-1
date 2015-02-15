@@ -572,10 +572,8 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
   uint8_t mask = 1;
 
   for (int i = 0; i < nFieldSize; i++) {
-    uint8_t missing_piece = nBitfield[i] ^ peerBitfields[peer][i];
-
     for (int j = 0; j < 8; j++) {
-      uint8_t candidate_bit = (missing_piece >> j) & mask;
+      uint8_t candidate_bit = (peerBitfields[peer][j] >> j) & mask;
       uint8_t bitfield_bit = (nBitfield[i] >> j) & mask;
 
       // only request if we're missing the piece and they have the piece
