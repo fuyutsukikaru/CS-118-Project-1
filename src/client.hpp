@@ -111,6 +111,8 @@ private:
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
   char getBit(char* array, int index);
 
+  uint8_t getBit(uint8_t* array, int index);
+
   string nPort;
   string nPeerId;
   string nTrackerUrl;
@@ -130,7 +132,7 @@ private:
   map<int, PeerInfo> socketToPeer;
   //map<pAttr, int> peerToSocket;
 
-  map<pAttr, char*> peerBitfields;
+  map<pAttr, const uint8_t*> peerBitfields;
 
   // maps peer attributes to whether we have sent to them
   vector<pAttr> hasPeerConnected;
