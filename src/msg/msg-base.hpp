@@ -98,7 +98,7 @@ protected:
   encodePayload() = 0;
 
   virtual void
-  decodePayload() = 1;
+  decodePayload() = 0;
 
   static uint32_t
   decodeUint32(const uint8_t* buf);
