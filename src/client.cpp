@@ -522,7 +522,7 @@ int Client::sendBitfield(int &sockfd, pAttr peer) {
 
 int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
   fprintf(stderr, "We are now handling the bitfield\n");
-  msg::Bitfield* tempBitfield = new msg::Bitfield(msg);
+  msg::Bitfield* tempBitfield = new msg::Bitfield();
   tempBitfield->decode(msg);
   const uint8_t* b_msg = (tempBitfield->getBitfield())->buf();
 
