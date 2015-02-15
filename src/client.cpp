@@ -518,6 +518,7 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
       case msg::MSG_ID_PIECE:
         // write the piece to our local file
         // increase our downloaded
+        handlePiece(msg, peer);
         break;
       default:
         break;
@@ -600,6 +601,36 @@ int Client::sendInterested(int& sockfd, pAttr peer) {
 int Client::sendUnchoke(pAttr peer) {
   //msg::Unchoke *unchoke = new msg::Unchoke();
   //sendPayload(*unchoke, peer);
+  return 0;
+}
+
+int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
+  msg::Piece* piece = new msg::Piece();
+  piece->decode(msg);
+
+  const uint32_t index = piece->getIndex();
+  ConstBufferPtr block = piece->getBlock();
+
+  FILE* fd;
+  int rc;
+  fd = fopen((nInfo->getName()).c_str(), "a+");
+  if (fd) {
+    if (fseek(fd, index * nInfo->getPieceLength(), 0) < 0) {
+      fprintf(stderr, "File seek error: %d\n", errno);
+      return RC_FILE_OPEN_FAILED;
+    }
+
+    fwrite(block->get(), nInfo->getPieceLength(), 1, fd);
+    if ((rc = fck()) < 0) {
+      fprintf(stderr, "File validation failed: %d\n", rc);
+      return RC_FILE_NOT_VALID;
+    } else {
+      nDownloaded += block->size();
+    }
+  } else {
+    return RC_FILE_OPEN_FAILED;
+  }
+
   return 0;
 }
 

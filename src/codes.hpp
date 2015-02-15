@@ -21,5 +21,7 @@ const int RC_TRACKER_RESPONSE_FAILED      = -1005;
 const int RC_INVALID_URL                  = -1006;
 const int RC_GET_ADDRESS_INFO_FAILED      = -1007;
 const int RC_FILE_ALLOCATE_FAILED         = -1008;
+const int RC_FILE_OPEN_FAILED             = -1009;
+const int RC_FILE_NOT_VALID               = -1010;
 
 #endif // CODES_HPP

@@ -106,11 +106,13 @@ private:
   // functions for sending messages
   int sendBitfield(int& sockfd, pAttr peer);
   int sendRequest(int& sockfd, pAttr peer);
-
   int sendInterested(int& sockfd, pAttr peer);
 
   // functions for dealing with messages
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
+  int handlePiece(ConstBufferPtr msg, pAttr peer);
+
+  // functions for receiving messages
   int receiveBitfield(int& sockfd, pAttr peer);
 
   char getBit(char* array, int index);
