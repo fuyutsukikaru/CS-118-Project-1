@@ -105,10 +105,12 @@ private:
 
   // functions for sending messages
   int sendBitfield(int& sockfd, pAttr peer);
-  int receiveBitfield(int& sockfd, pAttr peer);
+  int sendRequest(int& sockfd, pAttr peer);
 
   // functions for dealing with messages
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
+  int receiveBitfield(int& sockfd, pAttr peer);
+
   char getBit(char* array, int index);
 
   uint8_t getBit(uint8_t* array, int index);

@@ -488,19 +488,37 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
   } catch (msg::Error e) { // was not a handshake
     const uint8_t* header = msg->get();
 
+    // we should be periodically sending haves to all our peers
+    // at the same time, we periodically send interesteds to choked peers
+    // and requests to unchoked peers. this should be independent of this
+    // function.
+
     // check the message id (the fifth bit)
     switch(header[4]) {
       case msg::MSG_ID_INTERESTED:
+        // send an unchoke
+        // unless we are being mean. then do not.
         break;
       case msg::MSG_ID_HAVE:
+        // update the local instance of the peer's bitfield
+        // send a request? no we should be sending requests anyway...
+        break;
       case msg::MSG_ID_UNCHOKE:
+        // mark this peer as unchoked and send an interested
         break;
       case msg::MSG_ID_BITFIELD:
+        // update our local instance of the peer's bitfield
+        // then, if we're already unchoked, send a request
+        // if not, send an interested
         handleBitfield(msg, peer);
         break;
       case msg::MSG_ID_REQUEST:
+        // send the requested piece
+        // increase our uploaded
         break;
       case msg::MSG_ID_PIECE:
+        // write the piece to our local file
+        // increase our downloaded
         break;
       default:
         break;
@@ -527,6 +545,7 @@ int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
   const uint8_t* b_msg = (tempBitfield->getBitfield())->buf();
 
   peerBitfields[peer] = b_msg;
+
   return 0;
 }
 
@@ -545,6 +564,32 @@ int Client::receiveBitfield(int& sockfd, pAttr peer) {
   fprintf(stderr, "bitfield has length of %d\n", (int)n_buf_size);
 
   parseMessage(sockfd, hs_res, peer);
+  return 0;
+}
+
+int Client::sendRequest(int& sockfd, pAttr peer) {
+  // create a bitmask to deal with the bitfield
+  uint8_t mask = 1;
+
+  for (int i = 0; i < nFieldSize; i++) {
+    uint8_t missing_piece = nBitfield[i] ^ peerBitfields[peer][i];
+
+    for (int j = 0; j < 8; j++) {
+      uint8_t candidate_bit = (missing_piece >> j) & mask;
+      uint8_t bitfield_bit = (nBitfield[i] >> j) & mask;
+
+      // only request if we're missing the piece and they have the piece
+      if (candidate_bit == 1 && bitfield_bit != 1) {
+        int index = (i + 1) * j;
+        msg::Request request_msg = msg::Request(index, 0, nInfo->getPieceLength());
+
+        sendPayload(sockfd, request_msg, peer);
+        // deal with receiving the piece after
+        return 0;
+      }
+    }
+  }
+
   return 0;
 }
 
