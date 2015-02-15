@@ -256,6 +256,9 @@ int Client::connectTracker() {
           int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
           fprintf(stderr, "Setting up handshake with a peer\n");
           prepareHandshake(peerSockfd, nInfo->getHash(), *it);
+
+          sendBitfield(sockfd, t_pAttr);
+
           sockArray.push_back(peerSockfd);
           socketToPeer[peerSockfd] = *it;
 
@@ -326,7 +329,7 @@ int Client::sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer) {
   const char* b_msg = reinterpret_cast<const char*>(enc_msg->buf());
   cout << "size is " << enc_msg->size() << endl;
   cout << "size could be " << strlen(b_msg) << endl;
-  if (send(sockfd, b_msg, enc_msg->size(), 0) < 0) {
+  if (send(sockfd, b_msg, 8, 0) < 0) {
     fprintf(stderr, "Failed to send payload to peer %s:%d\n", peer.first.c_str(), peer.second);
     return RC_SEND_GET_REQUEST_FAILED;
   }
@@ -365,6 +368,7 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
   int t_pport = socketToPeer[sockfd].port;
   pAttr t_pAttr(t_pip, t_pport);
   parseMessage(sockfd, hs_res, t_pAttr);
+
 
   return 0;
 }
@@ -487,8 +491,6 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
     msg::HandShake *handshake = new msg::HandShake();
     handshake->decode(msg);
     fprintf(stderr, "The peer's peer id is %s\n", (handshake->getPeerId()).c_str());
-    sendBitfield(sockfd, peer);
-    receiveBitfield(sockfd, peer);
   } catch (msg::Error e) { // was not a handshake
     switch (lastRektMsgType[peer]) {
       case msg::MSG_ID_INTERESTED: // expect unchoke
@@ -517,8 +519,8 @@ int Client::sendBitfield(int &sockfd, pAttr peer) {
   ConstBufferPtr msg = make_shared<sbt::Buffer>(nBitfield, sizeof(nBitfield) - 1);
   msg::Bitfield bitfield_msg = msg::Bitfield(msg);
   sendPayload(sockfd, bitfield_msg, peer);
+  receiveBitfield(sockfd, peer);
 
-  lastRektMsgType[peer] = msg::MSG_ID_BITFIELD;
   return 0;
 }
 
@@ -535,6 +537,9 @@ int Client::receiveBitfield(int& sockfd, pAttr peer) {
     return RC_NO_TRACKER_RESPONSE;
   }
   fprintf(stderr, "bitfield has length of %d\n", (int)n_buf_size);
+  fprintf(stderr, "peer's bitfield is %s\n", hs_buf);
+
+  lastRektMsgType[peer] = msg::MSG_ID_BITFIELD;
 
   return 0;
 }
