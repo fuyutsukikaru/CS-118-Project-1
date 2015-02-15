@@ -257,8 +257,6 @@ int Client::connectTracker() {
           fprintf(stderr, "Setting up handshake with a peer\n");
           prepareHandshake(peerSockfd, nInfo->getHash(), *it);
 
-          sendBitfield(sockfd, t_pAttr);
-
           sockArray.push_back(peerSockfd);
           socketToPeer[peerSockfd] = *it;
 
@@ -490,6 +488,7 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
   try {
     msg::HandShake *handshake = new msg::HandShake();
     handshake->decode(msg);
+    sendBitfield(sockfd, peer);
     fprintf(stderr, "The peer's peer id is %s\n", (handshake->getPeerId()).c_str());
   } catch (msg::Error e) { // was not a handshake
     switch (lastRektMsgType[peer]) {
@@ -519,12 +518,14 @@ int Client::sendBitfield(int &sockfd, pAttr peer) {
   ConstBufferPtr msg = make_shared<sbt::Buffer>(nBitfield, sizeof(nBitfield) - 1);
   msg::Bitfield bitfield_msg = msg::Bitfield(msg);
   sendPayload(sockfd, bitfield_msg, peer);
+
   receiveBitfield(sockfd, peer);
 
   return 0;
 }
 
 int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
+  fprintf(stderr, "We are now handling the bitfield\n");
   return 0;
 }
 
@@ -536,11 +537,13 @@ int Client::receiveBitfield(int& sockfd, pAttr peer) {
     fprintf(stderr, "Failed to receive a bitfield from peer.\n");
     return RC_NO_TRACKER_RESPONSE;
   }
+  ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
   fprintf(stderr, "bitfield has length of %d\n", (int)n_buf_size);
   fprintf(stderr, "peer's bitfield is %s\n", hs_buf);
 
   lastRektMsgType[peer] = msg::MSG_ID_BITFIELD;
 
+  parseMessage(sockfd, hs_res, peer);
   return 0;
 }
 
