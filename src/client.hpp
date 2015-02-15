@@ -116,8 +116,7 @@ private:
   string nTrackerPort;
   string nTrackerEndpoint;
   string getRequest;
-  uint8_t* nBitfield;
-  uint8_t* nBitfield2;
+  char* nBitfield;
   int nFieldSize;
 
   vector<int> sockArray;
@@ -133,7 +132,7 @@ private:
   map<pAttr, char*> peerBitfields;
 
   // maps peer attributes to whether we have sent to them
-  map<pAttr, bool> hasPeerConnected;
+  vector<pAttr> hasPeerConnected;
 
   MetaInfo* nInfo;
   HttpResponse* nHttpResponse;

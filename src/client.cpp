@@ -34,9 +34,7 @@ Client::Client(const std::string& port, const std::string& torrent) {
 
   // Initialize bitfield
   initBitfield();
-  cout << "size is " << nFieldSize << endl;
-  nBitfield = new uint8_t[24];
-  nBitfield2 = new uint8_t[24];
+
   nRemaining = nInfo->getLength();
   fck();
 
@@ -114,10 +112,19 @@ int Client::fck() {
  * metainfo have been parsed first.
  */
 void Client::initBitfield() {
-  int piece_count = nInfo->getPieces().size();
+  //int piece_count = nInfo->getPieces().size();
+  int file_length = nInfo->getLength();
+  int pieces_length = nInfo->getPieceLength();
+  int piece_count = (file_length + pieces_length - 1) / pieces_length;
+
   //nBitfield = new uint8_t[(piece_count / 8) + 1];
   nFieldSize = (piece_count / 8) + 1;
   //nBitfield = new Buffer(nFieldSize);
+  cout << "pieces are is " << piece_count << endl;
+  cout << "size is " << nFieldSize << endl;
+  nBitfield = (char *) malloc(nFieldSize);
+  memset(nBitfield, 0, nFieldSize);
+  //nBitfield = (char *) realloc(nBitfield, nFieldSize);
 }
 
 /*
@@ -247,7 +254,7 @@ int Client::connectTracker() {
         int t_pport = it->port;
         pAttr t_pAttr(t_pip, t_pport);
         cout << it->ip << ":" << it->port << endl;
-        if (it->port != atoi(nPort.c_str()) && hasPeerConnected.find(t_pAttr) == hasPeerConnected.end()) {
+        if (it->port != atoi(nPort.c_str()) && find(hasPeerConnected.begin(), hasPeerConnected.end(), t_pAttr) == hasPeerConnected.end()) {
           int peerSockfd = socket(AF_INET, SOCK_STREAM, 0);
           fprintf(stderr, "Setting up handshake with a peer\n");
           prepareHandshake(peerSockfd, nInfo->getHash(), *it);
@@ -255,7 +262,7 @@ int Client::connectTracker() {
           socketToPeer[peerSockfd] = *it;
           //peerToSocket[t_pAttr] = peerSockfd;
 
-          hasPeerConnected[t_pAttr] = true;
+          hasPeerConnected.push_back(t_pAttr);
         }
       }
 
