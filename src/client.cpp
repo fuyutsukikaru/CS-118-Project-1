@@ -486,24 +486,25 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
     sendBitfield(sockfd, peer);
     fprintf(stderr, "The peer's peer id is %s\n", (handshake->getPeerId()).c_str());
   } catch (msg::Error e) { // was not a handshake
-    switch (lastRektMsgType[peer]) {
-      case msg::MSG_ID_INTERESTED: // expect unchoke
+    const uint8_t* header = msg->get();
+
+    // check the message id (the fifth bit)
+    switch(header[4]) {
+      case msg::MSG_ID_INTERESTED:
         break;
-      case msg::MSG_ID_HAVE: // expect request
+      case msg::MSG_ID_HAVE:
       case msg::MSG_ID_UNCHOKE:
         break;
-      case msg::MSG_ID_BITFIELD: // expect bitfield if not already received
+      case msg::MSG_ID_BITFIELD:
         handleBitfield(msg, peer);
         break;
-      case msg::MSG_ID_REQUEST: // expect piece
+      case msg::MSG_ID_REQUEST:
         break;
-      case msg::MSG_ID_PIECE: // expect request
+      case msg::MSG_ID_PIECE:
         break;
       default:
         break;
     }
-
-    // always expect have or interested
   }
 
   return 0;
