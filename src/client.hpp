@@ -116,8 +116,8 @@ private:
   string nTrackerPort;
   string nTrackerEndpoint;
   string getRequest;
-  char* nBitfield;
-  int nFieldSize;
+  uint8_t* nBitfield;
+  ssize_t nFieldSize;
 
   vector<int> sockArray;
 

@@ -112,19 +112,17 @@ int Client::fck() {
  * metainfo have been parsed first.
  */
 void Client::initBitfield() {
-  //int piece_count = nInfo->getPieces().size();
   int file_length = nInfo->getLength();
   int pieces_length = nInfo->getPieceLength();
   int piece_count = (file_length + pieces_length - 1) / pieces_length;
 
-  //nBitfield = new uint8_t[(piece_count / 8) + 1];
-  nFieldSize = (piece_count / 8) + 1;
+  nFieldSize = (piece_count + 7) / 8;
   //nBitfield = new Buffer(nFieldSize);
   cout << "pieces are is " << piece_count << endl;
   cout << "size is " << nFieldSize << endl;
-  nBitfield = (char *) malloc(nFieldSize);
-  memset(nBitfield, 0, nFieldSize);
-  //nBitfield = (char *) realloc(nBitfield, nFieldSize);
+  //nBitfield = (char *) malloc(nFieldSize);
+  nBitfield = new uint8_t[nFieldSize];
+  //memset(nBitfield, 0, nFieldSize);
 }
 
 /*
@@ -260,38 +258,14 @@ int Client::connectTracker() {
           prepareHandshake(peerSockfd, nInfo->getHash(), *it);
           sockArray.push_back(peerSockfd);
           socketToPeer[peerSockfd] = *it;
-          //peerToSocket[t_pAttr] = peerSockfd;
 
           hasPeerConnected.push_back(t_pAttr);
         }
       }
 
+      // Prepare a new request without any events
       prepareRequest(getRequest);
     }
-
-    vector<int>::iterator it = sockArray.begin();
-    for (; it != sockArray.end(); it++) {
-      // Initialize a new buffer to store the Handshake response
-      char hs_buf[100000] = {'\0'};
-      ssize_t n_buf_size = 0;
-      if ((n_buf_size = recv(*it, hs_buf, sizeof(hs_buf), 0)) == -1) {
-        fprintf(stderr, "Failed to receive a response from peer.\n");
-        return RC_NO_TRACKER_RESPONSE;
-      }
-      //ssize_t n_buf_size = recv(*it, hs_buf, sizeof(hs_buf), 0);
-      //fprintf(stderr, "error code: %d\n", errno);
-      fprintf(stderr, "buffer has length of %d\n", (int)n_buf_size);
-      // Calculate the actual size of the response message
-      ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
-
-      string t_pip = socketToPeer[*it].ip;
-      int t_pport = socketToPeer[*it].port;
-      pAttr t_pAttr(t_pip, t_pport);
-      parseMessage(*it, hs_res, t_pAttr);
-    }
-
-    // Prepare a new request without any events
-    //prepareRequest(getRequest);
 
     // Sleep for the interval we received from this either the previous or current response
     sleep(nTrackerResponse->getInterval());
@@ -350,7 +324,7 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd) {
 int Client::sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer) {
   ConstBufferPtr enc_msg = payload.encode();
   const char* b_msg = reinterpret_cast<const char*>(enc_msg->buf());
-  cout << "size is " << sizeof(uint8_t) * enc_msg->size() << endl;
+  cout << "size is " << enc_msg->size() << endl;
   cout << "size could be " << strlen(b_msg) << endl;
   if (send(sockfd, b_msg, enc_msg->size(), 0) < 0) {
     fprintf(stderr, "Failed to send payload to peer %s:%d\n", peer.first.c_str(), peer.second);
@@ -375,6 +349,22 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
     fprintf(stderr, "Failed to send handshake to port: %d\n", peer.port);
     return RC_SEND_GET_REQUEST_FAILED;
   }
+
+  // Initialize a new buffer to store the Handshake response
+  char hs_buf[100000] = {'\0'};
+  ssize_t n_buf_size = 0;
+  if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
+    fprintf(stderr, "Failed to receive a response from peer.\n");
+    return RC_NO_TRACKER_RESPONSE;
+  }
+  fprintf(stderr, "buffer has length of %d\n", (int)n_buf_size);
+  // Calculate the actual size of the response message
+  ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
+
+  string t_pip = socketToPeer[sockfd].ip;
+  int t_pport = socketToPeer[sockfd].port;
+  pAttr t_pAttr(t_pip, t_pport);
+  parseMessage(sockfd, hs_res, t_pAttr);
 
   return 0;
 }
