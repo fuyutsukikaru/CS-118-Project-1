@@ -91,7 +91,7 @@ private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
   int resolveHost(string& url, string& ip);
   int fck();
-  int parseMessage(ConstBufferPtr msg, pAttr peer);
+  int parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer);
   string generatePeer();
   void initBitfield();
 
@@ -101,11 +101,11 @@ private:
   int nUploaded;
   int nRemaining;
 
-  int sendPayload(msg::MsgBase& payload, pAttr peer);
+  int sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer);
 
   // functions for sending messages
-  int sendBitfield(pAttr peer);
-  int receiveBitfield(pAttr peer);
+  int sendBitfield(int& sockfd, pAttr peer);
+  int receiveBitfield(int& sockfd, pAttr peer);
 
   // functions for dealing with messages
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
@@ -117,6 +117,7 @@ private:
   string nTrackerEndpoint;
   string getRequest;
   uint8_t* nBitfield;
+  uint8_t* nBitfield2;
   int nFieldSize;
 
   vector<int> sockArray;

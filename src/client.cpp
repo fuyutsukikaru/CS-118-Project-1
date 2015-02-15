@@ -34,7 +34,9 @@ Client::Client(const std::string& port, const std::string& torrent) {
 
   // Initialize bitfield
   initBitfield();
-
+  cout << "size is " << nFieldSize << endl;
+  nBitfield = new uint8_t[24];
+  nBitfield2 = new uint8_t[24];
   nRemaining = nInfo->getLength();
   fck();
 
@@ -115,9 +117,7 @@ void Client::initBitfield() {
   int piece_count = nInfo->getPieces().size();
   //nBitfield = new uint8_t[(piece_count / 8) + 1];
   nFieldSize = (piece_count / 8) + 1;
-  uint8_t tempBitfield[nFieldSize];
-  memset(tempBitfield, 0, sizeof(tempBitfield));
-  nBitfield = tempBitfield;
+  //nBitfield = new Buffer(nFieldSize);
 }
 
 /*
@@ -277,11 +277,10 @@ int Client::connectTracker() {
       // Calculate the actual size of the response message
       ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
 
-      sockfd = *it;
       string t_pip = socketToPeer[*it].ip;
       int t_pport = socketToPeer[*it].port;
       pAttr t_pAttr(t_pip, t_pport);
-      parseMessage(hs_res, t_pAttr);
+      parseMessage(*it, hs_res, t_pAttr);
     }
 
     // Prepare a new request without any events
@@ -341,12 +340,12 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd) {
     return 0;
 }
 
-int Client::sendPayload(msg::MsgBase& payload, pAttr peer) {
+int Client::sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer) {
   ConstBufferPtr enc_msg = payload.encode();
   const char* b_msg = reinterpret_cast<const char*>(enc_msg->buf());
-  //int sockfd = peerToSocket.find(peer)->second;
-  //createConnection(peer.first, peer.second, sockfd);
-  if (send(sockfd, b_msg, nFieldSize, 0) < 0) {
+  cout << "size is " << sizeof(uint8_t) * enc_msg->size() << endl;
+  cout << "size could be " << strlen(b_msg) << endl;
+  if (send(sockfd, b_msg, enc_msg->size(), 0) < 0) {
     fprintf(stderr, "Failed to send payload to peer %s:%d\n", peer.first.c_str(), peer.second);
     return RC_SEND_GET_REQUEST_FAILED;
   }
@@ -486,13 +485,13 @@ int Client::extract(const string& url, string& domain, string& port, string& end
  * by the client. Differentiates between handshakes and any
  * other kind of message, and takes appropriate actions to respond.
  */
-int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
+int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
   try {
     msg::HandShake *handshake = new msg::HandShake();
     handshake->decode(msg);
     fprintf(stderr, "The peer's peer id is %s\n", (handshake->getPeerId()).c_str());
-    sendBitfield(peer);
-    receiveBitfield(peer);
+    sendBitfield(sockfd, peer);
+    receiveBitfield(sockfd, peer);
   } catch (msg::Error e) { // was not a handshake
     switch (lastRektMsgType[peer]) {
       case msg::MSG_ID_INTERESTED: // expect unchoke
@@ -517,10 +516,10 @@ int Client::parseMessage(ConstBufferPtr msg, pAttr peer) {
   return 0;
 }
 
-int Client::sendBitfield(pAttr peer) {
+int Client::sendBitfield(int &sockfd, pAttr peer) {
   ConstBufferPtr msg = make_shared<sbt::Buffer>(nBitfield, sizeof(nBitfield) - 1);
   msg::Bitfield bitfield_msg = msg::Bitfield(msg);
-  sendPayload(bitfield_msg, peer);
+  sendPayload(sockfd, bitfield_msg, peer);
 
   lastRektMsgType[peer] = msg::MSG_ID_BITFIELD;
   return 0;
@@ -530,7 +529,7 @@ int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
   return 0;
 }
 
-int Client::receiveBitfield(pAttr peer) {
+int Client::receiveBitfield(int& sockfd, pAttr peer) {
   //int sockfd = peerToSocket.find(peer)->second;
   char hs_buf[1000] = {'\0'};
   ssize_t n_buf_size = 0;
@@ -546,7 +545,7 @@ int Client::receiveBitfield(pAttr peer) {
 // Proof of concept
 int Client::sendUnchoke(pAttr peer) {
   msg::Unchoke *unchoke = new msg::Unchoke();
-  sendPayload(*unchoke, peer);
+  //sendPayload(*unchoke, peer);
   return 0;
 }
 
