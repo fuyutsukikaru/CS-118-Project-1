@@ -336,7 +336,6 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
 
   fprintf(stderr, "Initiating handshake with the peers\n");
   createConnection(peer.ip, peer.port, sockfd);
-  //createConnection(peer.ip, "11111", sockfd);
 
   const char* shakeMsg = reinterpret_cast<const char*>(encodedShake->buf());
 
@@ -588,6 +587,12 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
     }
   }
 
+  return 0;
+}
+
+int Client::sendInterested(int& sockfd, pAttr peer) {
+  msg::Interested intr_msg = msg::Interested();
+  sendPayload(sockfd, intr_msg, peer);
   return 0;
 }
 

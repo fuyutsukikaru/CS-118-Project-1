@@ -107,6 +107,8 @@ private:
   int sendBitfield(int& sockfd, pAttr peer);
   int sendRequest(int& sockfd, pAttr peer);
 
+  int sendInterested(int& sockfd, pAttr peer);
+
   // functions for dealing with messages
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
   int receiveBitfield(int& sockfd, pAttr peer);
