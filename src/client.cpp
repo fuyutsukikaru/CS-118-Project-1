@@ -117,12 +117,8 @@ void Client::initBitfield() {
   int piece_count = (file_length + pieces_length - 1) / pieces_length;
 
   nFieldSize = (piece_count + 7) / 8;
-  //nBitfield = new Buffer(nFieldSize);
-  cout << "pieces are is " << piece_count << endl;
-  cout << "size is " << nFieldSize << endl;
-  //nBitfield = (char *) malloc(nFieldSize);
   nBitfield = new uint8_t[nFieldSize];
-  //memset(nBitfield, 0, nFieldSize);
+  memset(nBitfield, 0, nFieldSize);
 }
 
 /*
@@ -324,10 +320,9 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd) {
 
 int Client::sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer) {
   ConstBufferPtr enc_msg = payload.encode();
+  int msg_length = payload.getPayload()->size() + 5;
   const char* b_msg = reinterpret_cast<const char*>(enc_msg->buf());
-  cout << "size is " << enc_msg->size() << endl;
-  cout << "size could be " << strlen(b_msg) << endl;
-  if (send(sockfd, b_msg, 8, 0) < 0) {
+  if (send(sockfd, b_msg, msg_length, 0) < 0) {
     fprintf(stderr, "Failed to send payload to peer %s:%d\n", peer.first.c_str(), peer.second);
     return RC_SEND_GET_REQUEST_FAILED;
   }
@@ -515,7 +510,7 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
 }
 
 int Client::sendBitfield(int &sockfd, pAttr peer) {
-  ConstBufferPtr msg = make_shared<sbt::Buffer>(nBitfield, sizeof(nBitfield) - 1);
+  ConstBufferPtr msg = make_shared<sbt::Buffer>(nBitfield, nFieldSize);
   msg::Bitfield bitfield_msg = msg::Bitfield(msg);
   sendPayload(sockfd, bitfield_msg, peer);
 
