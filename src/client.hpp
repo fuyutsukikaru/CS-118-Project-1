@@ -109,6 +109,7 @@ private:
 
   // functions for dealing with messages
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
+  char getBit(char* array, int index);
 
   string nPort;
   string nPeerId;

@@ -522,11 +522,18 @@ int Client::sendBitfield(int &sockfd, pAttr peer) {
 
 int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
   fprintf(stderr, "We are now handling the bitfield\n");
+  //char* b_msg = (char*)(msg->buf());
+  msg::Bitfield* tempBitfield = new msg::Bitfield(msg);
+  tempBitfield->decodePayload();
+  const uint8_t* b_msg = (tempBitfield->getBitfield())->buf();
   return 0;
 }
 
+char Client::getBit(uint8_t* array, int index) {
+  return (array[index/8] >> 7 - (index * 0x7)) & 0x1;
+}
+
 int Client::receiveBitfield(int& sockfd, pAttr peer) {
-  //int sockfd = peerToSocket.find(peer)->second;
   char hs_buf[1000] = {'\0'};
   ssize_t n_buf_size = 0;
   if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
@@ -535,9 +542,8 @@ int Client::receiveBitfield(int& sockfd, pAttr peer) {
   }
   ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
   fprintf(stderr, "bitfield has length of %d\n", (int)n_buf_size);
-  fprintf(stderr, "peer's bitfield is %s\n", hs_buf);
 
-  lastRektMsgType[peer] = msg::MSG_ID_BITFIELD;
+  peerBitfields[peer] = hs_buf;
 
   parseMessage(sockfd, hs_res, peer);
   return 0;
@@ -545,7 +551,7 @@ int Client::receiveBitfield(int& sockfd, pAttr peer) {
 
 // Proof of concept
 int Client::sendUnchoke(pAttr peer) {
-  msg::Unchoke *unchoke = new msg::Unchoke();
+  //msg::Unchoke *unchoke = new msg::Unchoke();
   //sendPayload(*unchoke, peer);
   return 0;
 }
