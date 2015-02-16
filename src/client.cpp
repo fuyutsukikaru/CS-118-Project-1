@@ -21,6 +21,10 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nDownloaded = 0;
   nUploaded = 0;
 
+  // multi-thread stuff
+  threadCount = 0;
+  isUsed = {0};
+
   // Generate a randomized peer_id
   nPeerId = generatePeer();
 
@@ -41,8 +45,27 @@ Client::Client(const std::string& port, const std::string& torrent) {
   // Extract the tracker_url and tracker_port from the announce
   extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort, nTrackerEndpoint);
 
-  // Connect to the tracker
-  connectTracker();
+  ThreadArgs arg;
+
+  while (true) {
+    pthread_mutex_lock(&mutex);
+    if (threadCount >= MAX_THREAD - 1) {
+      sleep(1);
+      continue;
+    } else {
+      for (int i = 0; i < MAX_THREAD; i++) {
+        if (isUsed[i] == false) {
+          arg.threadId = i;
+          isUsed[i] = true;
+          break;
+        }
+      }
+    }
+    pthread_mutex_unlock(&mutex);
+
+    // Connect to the tracker
+    connectTracker();
+  }
 }
 
 Client::~Client() {
@@ -261,11 +284,10 @@ int Client::bindClient(string& clientPort, string ipaddr) {
  * - receive/parse/decode the response
  * - close the connection
  */
-int Client::connectTracker() {
+void* Client::connectTracker(void* args) {
 
   // Prepare the request with a started event
   prepareRequest(getRequest, kStarted);
-  int num_times = 0;
 
   // Retrieve the tracker's IP address
   string tip;
@@ -273,8 +295,7 @@ int Client::connectTracker() {
   bindClient(nPort, CLIENT_IP);
 
   // Keep the client running until tracker ends client
-  while (true) {
-
+  //while (true) {
     //fprintf(stderr, "Started connecting to the tracker\n");
     // Create socket and connect to port using TCP IP
     createConnection(tip, nTrackerPort, sockfd);
@@ -346,11 +367,9 @@ int Client::connectTracker() {
       prepareRequest(getRequest, kCompleted);
     }
 
-    num_times++;
-
     // Close the sockfd so that we can create a new connection for non-persistent Http requests
     close(sockfd);
-  }
+  //}
 
   return 0;
 }

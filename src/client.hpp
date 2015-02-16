@@ -25,6 +25,8 @@
 #define BUFFER_SIZE 4096
 #define PIECE_HASH  20
 
+#define MAX_THREAD  4
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -36,6 +38,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <pthread.h>
 
 #include <map>
 #include <utility>
@@ -88,7 +91,7 @@ public:
   int bindClient(string& clientPort, string ipaddr);
   int createConnection(string ip, string port, int &sockfd);
   int createConnection(string ip, uint16_t port, int &sockfd);
-  int connectTracker();
+  void* connectTracker();
   int prepareRequest(string& request, int event = kIgnore);
   int prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer);
   int sendUnchoke(pAttr peer);
@@ -162,6 +165,12 @@ private:
   TrackerResponse* nTrackerResponse;
   vector<PeerInfo> peers;
   msg::HandShake* nHandshake;
+
+  // multi-thread stuff
+  pthread_mutex_t mutex;
+  int threadCount;
+  pthread_t threads[MAX_THREAD];
+  bool isUsed[MAX_THREAD];
 };
 
 } // namespace sbt
