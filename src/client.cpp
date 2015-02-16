@@ -342,6 +342,7 @@ int Client::connectTracker() {
     if (nDownloaded < nInfo->getLength()) {
       prepareRequest(getRequest);
     } else {
+      cout << "COMPLETED, NOW TELLING TRACKER" << endl;
       prepareRequest(getRequest, kCompleted);
     }
 
@@ -366,7 +367,9 @@ int Client::nitroConnect(int sleep_count) {
       pAttr t_pAttr(t_pip, t_pport);
 
       // Send an interested to every peer you're connected to
-      sendInterested(*iter, t_pAttr);
+      if (!peerStatus[t_pAttr].unchoked) {
+        sendInterested(*iter, t_pAttr);
+      }
 
       // If the peer is unchoked, then send a request for a piece you don't have
       if (peerStatus[t_pAttr].unchoked) {
