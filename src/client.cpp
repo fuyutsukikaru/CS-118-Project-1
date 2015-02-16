@@ -280,7 +280,7 @@ int Client::connectTracker() {
 
         // If the peer is unchoked, then send a request for a piece you don't have
         if (peerUnchoked[t_pAttr]) {
-          //sendRequest(*iter, t_pAttr);
+          sendRequest(*iter, t_pAttr);
         }
       }
 
@@ -576,19 +576,30 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
   // create a bitmask to deal with the bitfield
   uint8_t mask = 1;
 
-  for (int i = 0; i < nFieldSize; i++) {
-    for (int j = 0; j < 8; j++) {
-      uint8_t candidate_bit = (peerBitfields[peer][j] >> j) & mask;
-      uint8_t bitfield_bit = (nBitfield[i] >> j) & mask;
+  const uint8_t* peers_bitfield = peerBitfields[peer];
+  if (peers_bitfield == NULL) {
+    cout << "peer does not have anything" << endl;
+  }
 
-      // only request if we're missing the piece and they have the piece
-      if (candidate_bit == 1 && bitfield_bit != 1) {
-        int index = (i + 1) * j;
-        msg::Request request_msg = msg::Request(index, 0, nInfo->getPieceLength());
+  if (peers_bitfield != NULL) {
+    for (int i = 0; i < nFieldSize; i++) {
+      for (int j = 0; j < 8; j++) {
+        cout << "pre segfault" << endl;
+        cout << "candidatebitsubj is " << peers_bitfield[j] << endl;
+        uint8_t candidate_bit = (peers_bitfield[j] >> j) & mask;
+        uint8_t bitfield_bit = (nBitfield[i] >> j) & mask;
+        cout << "bitfieldbit is " << bitfield_bit << endl;
 
-        sendPayload(sockfd, request_msg, peer);
-        // deal with receiving the piece after
-        return 0;
+        // only request if we're missing the piece and they have the piece
+        if (candidate_bit == 1 && bitfield_bit != 1) {
+          int index = (i + 1) * j;
+          cout << "current index is " << index << endl;
+          msg::Request request_msg = msg::Request(index, 0, nInfo->getPieceLength());
+
+          sendPayload(sockfd, request_msg, peer);
+          // deal with receiving the piece after
+          return 0;
+        }
       }
     }
   }
