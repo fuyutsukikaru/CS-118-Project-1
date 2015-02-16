@@ -112,16 +112,16 @@ int Client::fck() {
   return 0;
 }
 
-int Client::fpck(int index) {
+int Client::fpck(int index, int length) {
   vector<uint8_t> pieces = nInfo->getPieces();
   int piece_hash_count = pieces.size() / PIECE_HASH;
 
   ifstream fp;
   fp.open(nInfo->getName(), ios::in | ios::binary);
   fp.seekg(index * nInfo->getPieceLength());
-  uint8_t* piece = new uint8_t[nInfo->getPieceLength()];
-  fp.read((char *)piece, nInfo->getPieceLength());
-  ConstBufferPtr piece_hash = util::sha1(make_shared<Buffer>(piece, nInfo->getPieceLength()));
+  uint8_t* piece = new uint8_t[length];
+  fp.read((char *)piece, length);
+  ConstBufferPtr piece_hash = util::sha1(make_shared<Buffer>(piece, length));
 
   bool valid = true;
   for (int i = 0; i < PIECE_HASH; i++) {
@@ -735,15 +735,17 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
   ofstream fp;
   fp.open(nInfo->getName(), ios::in | ios::out | ios::binary);
   fp.seekp(index * nInfo->getPieceLength(), ios::beg);
-  fp.write((char *)(block->get()), nInfo->getPieceLength());
 
-  if ((rc = fpck(index)) < 0) {
+  int len = nRemaining > nInfo->getPieceLength() ? nInfo->getPieceLength() : nRemaining;
+  fp.write((char *)(block->get()), len);
+
+  if ((rc = fpck(index, len)) < 0) {
     fprintf(stderr, "Piece validation failed: %d\n", rc);
     return RC_PIECE_NOT_VALID;
   } else {
-    nDownloaded += block->size();
-    nRemaining -= block->size();
-    fprintf(stderr, "We received %d\n", nDownloaded);
+    nDownloaded += len;
+    nRemaining -= len;
+    fprintf(stderr, "We received %d\n", len);
   }
 
   return 0;
