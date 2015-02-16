@@ -749,10 +749,6 @@ int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
   return 0;
 }
 
-uint8_t Client::getBit(uint8_t* array, int index) {
-  return (array[index/8] >> 7 - (index * 0x7)) & 0x1;
-}
-
 int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
   msg::Piece* piece = new msg::Piece();
   piece->decode(msg);
