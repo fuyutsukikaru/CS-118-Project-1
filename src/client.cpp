@@ -735,6 +735,7 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
     return RC_PIECE_NOT_VALID;
   } else {
     nDownloaded += block->size();
+    nRemaining -= block->size();
     fprintf(stderr, "We received %d\n", nDownloaded);
   }
 
