@@ -737,7 +737,11 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
   fp.open(nInfo->getName(), ios::in | ios::out | ios::binary);
   fp.seekp(index * nInfo->getPieceLength(), ios::beg);
 
-  int len = nRemaining > nInfo->getPieceLength() ? nInfo->getPieceLength() : nRemaining;
+  int p_length = nInfo->getPieceLength();
+  int remainder = nRemaining - p_length;
+  int len = remainder > p_length ? p_length : remainder;
+  cout << "dealing with piece of length " << len << endl;
+
   fp.write((char *)(block->get()), len);
 
   if ((rc = fpck(index, len)) < 0) {
