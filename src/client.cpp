@@ -32,7 +32,6 @@ Client::Client(const std::string& port, const std::string& torrent) {
   ifstream torrentStream(torrent, ifstream::in);
   nInfo->wireDecode(torrentStream);
 
-  cout << "FILE LENGTH IS " << nInfo->getLength() << endl;
   // Initialize bitfield
   initBitfield();
 
@@ -141,14 +140,6 @@ int Client::fpck(int index) {
   int offset = index % 8;
   uint8_t mask = 1;
   nBitfield[byte] |= mask << offset;
-
-  cout << "BITFIELD IS ";
-  for (int i = 0; i < nFieldSize; i++) {
-    for (int j = 0; j < 8; j++) {
-      cout << ((nBitfield[i] >> j) & mask);
-    }
-  }
-  cout << endl;
 
   delete [] piece;
   return 0;
@@ -653,13 +644,13 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
     }
   }
   cout << endl;
+
   if (peers_bitfield != NULL) {
     for (int i = 0; i < nFieldSize; i++) {
       for (int j = 0; j < 8; j++) {
         uint8_t candidate_bit = (peers_bitfield[i] >> j) & mask;
         uint8_t bitfield_bit = (nBitfield[i] >> j) & mask;
 
-        fprintf(stderr, "piece no: %d, candidate bit: %d, our bit: %d\n", (i * 8) + j, candidate_bit, bitfield_bit);
         // only request if we're missing the piece and they have the piece
         if (candidate_bit == 1 && bitfield_bit != 1) {
           int index = (i * 8) + j;
@@ -736,7 +727,6 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
 
   ofstream fp;
   fp.open(nInfo->getName(), ios::in | ios::out | ios::binary);
-cerr << "SEEKING TO " << index * nInfo->getPieceLength() << endl;
   fp.seekp(index * nInfo->getPieceLength(), ios::beg);
   fp.write((char *)(block->get()), nInfo->getPieceLength());
 
