@@ -97,7 +97,7 @@ private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
   int resolveHost(string& url, string& ip);
   int fck();
-  int fpck(int index); // file piece check
+  int fpck(int index, int length); // file piece check
   int parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer);
   string generatePeer();
   void initBitfield();
