@@ -224,7 +224,7 @@ int Client::bindClient(string& clientPort, string ipaddr) {
 
   peerStatus[t_pAttr] = peerstat;
   sockArray.push_back(peerSockfd);
-  peerIsConnected.push_back(t_pAttr);
+  hasPeerConnected.push_back(t_pAttr);
   /*HandShake* tempHandshake = new HandShake();
 
   sockArray.push_back(peerSockfd);
