@@ -678,6 +678,7 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
   }
   cout << endl;*/
 
+
   if (peers_bitfield != NULL) {
     for (int i = 0; i < nFieldSize; i++) {
       for (int j = 7; j >= 0; j--) {
@@ -686,10 +687,15 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
 
         // only request if we're missing the piece and they have the piece
         if (candidate_bit == 1 && bitfield_bit != 1) {
-          int index = (i * 8) + (7 - j);
+          unsigned int index = (i * 8) + (7 - j);
           cout << "Requesting piece " << index << endl;
-          msg::Request request_msg = msg::Request(index, 0, nInfo->getPieceLength());
 
+          int len = nInfo->getPieceLength();
+          if (index == nPieceCount - 1) {
+            len = nInfo->getLength() % nInfo->getPieceLength();
+          }
+
+          msg::Request request_msg = msg::Request(index, 0, len);
           sendPayload(sockfd, request_msg, peer);
 
           receivePayload(sockfd, peer);
