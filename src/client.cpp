@@ -516,8 +516,6 @@ int Client::resolveHost(string& url, string& ip) {
  */
 int Client::prepareRequest(string& request, int event /*= kIgnore*/) {
   string url_f = "/%s?info_hash=%s&peer_id=%s&port=%s&uploaded=%d&downloaded=%d&left=%d";
-  const char* url_hash = url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str();
-  const char* url_id = url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str();
 
   string url_event = "";
   switch(event) {
@@ -532,6 +530,10 @@ int Client::prepareRequest(string& request, int event /*= kIgnore*/) {
       break;
   }
   url_f += url_event;
+
+
+  const char* url_hash = url::encode((const uint8_t *)(nInfo->getHash()->get()), 20).c_str();
+  const char* url_id = url::encode((const uint8_t *)nPeerId.c_str(), 20).c_str();
 
   const char* url_f_c = url_f.c_str();
   char request_url[BUFFER_SIZE];
