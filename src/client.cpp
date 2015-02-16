@@ -82,6 +82,7 @@ int Client::fck() {
 
     int piece_hash_count = pieces.size() / PIECE_HASH;
     int pieces_left = piece_hash_count;
+    nPieceCount = piece_hash_count;
 
     char *piece = new char[nInfo->getPieceLength()];
     while (!feof(fd)) {
@@ -114,8 +115,7 @@ int Client::fck() {
 
 int Client::fpck(int index, int length) {
   vector<uint8_t> pieces = nInfo->getPieces();
-  int piece_hash_count = pieces.size() / PIECE_HASH;
-
+  cout << "OUR PIECE HAS LENGTH " << length << endl;
   ifstream fp;
   fp.open(nInfo->getName(), ios::in | ios::binary);
   fp.seekg(index * nInfo->getPieceLength());
@@ -131,7 +131,24 @@ int Client::fpck(int index, int length) {
   }
 
   if (!valid) {
-    fprintf(stderr, "Piece hash check failed");
+    fprintf(stderr, "Piece hash check failed\n");
+      cout << "PIECE NOT VALID" << endl;
+      cout << "PIECE: ";
+      for (int j = 0; j < length; j++) {
+        cout << piece[j];
+      }
+      cout << endl;
+      cout << "OUR HASH: ";
+      for (int j = 0; j < PIECE_HASH; j++) {
+        cout << int(piece_hash->get()[j]);
+      }
+      cout << endl;
+      cout << "INFO HASH: ";
+      for (int j = 0; j < PIECE_HASH; j++) {
+        cout << int(pieces[(index * PIECE_HASH) + j]);
+      }
+      cout << endl;
+
     return RC_PIECE_NOT_VALID;
   }
 
@@ -139,7 +156,7 @@ int Client::fpck(int index, int length) {
   int byte = index / 8;
   int offset = index % 8;
   uint8_t mask = 1;
-  nBitfield[byte] |= mask << offset;
+  nBitfield[byte] |= mask << (7 - offset);
 
   delete [] piece;
   return 0;
@@ -640,14 +657,14 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
 
   cout << "CANDIDATE BITFIELD IS ";
   for (int i = 0; i < nFieldSize; i++) {
-    for (int j = 0; j < 8; j++) {
+    for (int j = 7; j >= 0; j--) {
       cout << ((peers_bitfield[i] >> j) & mask);
     }
   }
   cout << endl;
   cout << "OUR BITFIELD IS ";
   for (int i = 0; i < nFieldSize; i++) {
-    for (int j = 0; j < 8; j++) {
+    for (int j = 7; j >= 0; j--) {
       cout << ((nBitfield[i] >> j) & mask);
     }
   }
@@ -655,13 +672,13 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
 
   if (peers_bitfield != NULL) {
     for (int i = 0; i < nFieldSize; i++) {
-      for (int j = 0; j < 8; j++) {
+      for (int j = 7; j >= 0; j--) {
         uint8_t candidate_bit = (peers_bitfield[i] >> j) & mask;
         uint8_t bitfield_bit = (nBitfield[i] >> j) & mask;
 
         // only request if we're missing the piece and they have the piece
         if (candidate_bit == 1 && bitfield_bit != 1) {
-          int index = (i * 8) + j;
+          int index = (i * 8) + (7 - j);
           cout << "Requesting piece " << index << endl;
           msg::Request request_msg = msg::Request(index, 0, nInfo->getPieceLength());
 
@@ -737,10 +754,15 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
   fp.open(nInfo->getName(), ios::in | ios::out | ios::binary);
   fp.seekp(index * nInfo->getPieceLength(), ios::beg);
 
-  int p_length = nInfo->getPieceLength();
-  int remainder = nRemaining - p_length;
-  int len = remainder > p_length ? p_length : remainder;
+  int len = nInfo->getPieceLength();
   cout << "dealing with piece of length " << len << endl;
+  cout << "OUR FILE HAS THIS MANY PIECES: " << nPieceCount << endl;
+
+  if (index == nPieceCount - 1) {
+    cout << "LAST PIECE! BE CAREFUL!" << endl;
+    len = nInfo->getLength() % nInfo->getPieceLength();
+    cout << "IT IS NOW LENGTH " << len << endl;
+  }
 
   fp.write((char *)(block->get()), len);
 

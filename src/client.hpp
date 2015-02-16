@@ -104,6 +104,7 @@ private:
 
   int sockfd;
   int clientSockfd;
+  unsigned int nPieceCount;
   int nDownloaded = 0;
   int nUploaded = 0;
   int nRemaining = 0;
