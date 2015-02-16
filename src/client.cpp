@@ -339,7 +339,11 @@ int Client::connectTracker() {
     nitroConnect(2);
 
     // Prepare a new request without any events
-    prepareRequest(getRequest);
+    if (nDownloaded < nInfo->getLength()) {
+      prepareRequest(getRequest);
+    } else {
+      prepareRequest(getRequest, kCompleted);
+    }
 
     num_times++;
 
@@ -654,7 +658,7 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
   uint8_t mask = 1;
 
   const uint8_t* peers_bitfield = peerBitfields[peer];
-
+/*
   cout << "CANDIDATE BITFIELD IS ";
   for (int i = 0; i < nFieldSize; i++) {
     for (int j = 7; j >= 0; j--) {
@@ -668,7 +672,7 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
       cout << ((nBitfield[i] >> j) & mask);
     }
   }
-  cout << endl;
+  cout << endl;*/
 
   if (peers_bitfield != NULL) {
     for (int i = 0; i < nFieldSize; i++) {
@@ -755,13 +759,8 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
   fp.seekp(index * nInfo->getPieceLength(), ios::beg);
 
   int len = nInfo->getPieceLength();
-  cout << "dealing with piece of length " << len << endl;
-  cout << "OUR FILE HAS THIS MANY PIECES: " << nPieceCount << endl;
-
   if (index == nPieceCount - 1) {
-    cout << "LAST PIECE! BE CAREFUL!" << endl;
     len = nInfo->getLength() % nInfo->getPieceLength();
-    cout << "IT IS NOW LENGTH " << len << endl;
   }
 
   fp.write((char *)(block->get()), len);
