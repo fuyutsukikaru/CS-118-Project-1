@@ -209,7 +209,7 @@ int Client::bindClient(string& clientPort, string ipaddr) {
     return RC_CLIENT_CONNECTION_FAILED;
   }
 
-  fprintf(stderr, "We are now listening on the port %s\n", nPort.c_str());
+  /*fprintf(stderr, "We are now listening on the port %s\n", nPort.c_str());
 
   // Accept a connection
   struct sockaddr_in peerAddr;
@@ -244,7 +244,7 @@ int Client::bindClient(string& clientPort, string ipaddr) {
 
   peerStatus[t_pAttr] = peerstat;
   sockArray.push_back(peerSockfd);
-  hasPeerConnected.push_back(t_pAttr);
+  hasPeerConnected.push_back(t_pAttr);*/
   /*HandShake* tempHandshake = new HandShake();
 
   sockArray.push_back(peerSockfd);

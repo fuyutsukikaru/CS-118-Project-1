@@ -19,7 +19,7 @@ sleep 1
 
 sleep 1
 
-./build/simple-bt 60207 ./tools/test-2.torrent > /dev/null/ 2>&1 &
+./build/simple-bt 60207 ./tools/test-2.torrent > /dev/null 2>&1 &
 
 for ((x = 0; x < 30; x++)); do
   printf %s .
