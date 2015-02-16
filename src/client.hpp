@@ -103,9 +103,9 @@ private:
 
   int sockfd;
   int clientSockfd;
-  int nDownloaded;
-  int nUploaded;
-  int nRemaining;
+  int nDownloaded = 0;
+  int nUploaded = 0;
+  int nRemaining = 0;
 
   int sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer);
 

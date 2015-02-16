@@ -301,9 +301,9 @@ int Client::connectTracker() {
         }
       }
 
-      // Prepare a new request without any events
-      prepareRequest(getRequest);
     }
+    // Prepare a new request without any events
+    prepareRequest(getRequest);
 
     // Sleep for the interval we received from this either the previous or current response
     sleep(nTrackerResponse->getInterval());
@@ -610,6 +610,8 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
           msg::Request request_msg = msg::Request(index, 0, nInfo->getPieceLength());
 
           sendPayload(sockfd, request_msg, peer);
+
+          receivePayload(sockfd, peer);
           // deal with receiving the piece after
           return 0;
         }
@@ -672,6 +674,8 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
   int rc;
   fd = fopen((nInfo->getName()).c_str(), "a+");
   if (fd) {
+
+    cerr << "We're in this block" << endl;
     if (fseek(fd, index * nInfo->getPieceLength(), 0) < 0) {
       fprintf(stderr, "File seek error: %d\n", errno);
       return RC_FILE_OPEN_FAILED;
@@ -683,8 +687,10 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
       return RC_FILE_NOT_VALID;
     } else {
       nDownloaded += block->size();
+      fprintf(stderr, "We received %d\n", nDownloaded);
     }
   } else {
+    cerr << "File open failed" << endl;
     return RC_FILE_OPEN_FAILED;
   }
 
