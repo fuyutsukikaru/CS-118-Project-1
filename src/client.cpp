@@ -85,14 +85,19 @@ int Client::fck() {
 
     char *piece = new char[nInfo->getPieceLength()];
     while (!feof(fd)) {
+      int index = piece_hash_count - pieces_left;
       vector<uint8_t> c_piece(begin, end);
       size_t length = fread(piece, sizeof(char) * nInfo->getPieceLength(), 1, fd);
       ConstBufferPtr piece_hash = util::sha1(make_shared<sbt::Buffer>(piece, length));
 
       if (*piece_hash == c_piece) {
-        fprintf(stderr, "Piece %d validated\n", piece_hash_count - pieces_left);
-
-        // set bitfield
+        fprintf(stderr, "Piece %d validated\n", index);
+        int byte = index / 8;
+        int offset = index % 8;
+        uint8_t mask = 1;
+        if (((nBitfield[byte] >> offset) & mask) != 1) {
+          nBitfield[byte] |= mask << offset;
+        }
       }
 
       pieces_left--;
