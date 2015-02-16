@@ -32,6 +32,7 @@ Client::Client(const std::string& port, const std::string& torrent) {
   ifstream torrentStream(torrent, ifstream::in);
   nInfo->wireDecode(torrentStream);
 
+  cout << "FILE LENGTH IS " << nInfo->getLength() << endl;
   // Initialize bitfield
   initBitfield();
 
@@ -109,6 +110,47 @@ int Client::fck() {
     return RC_FILE_ALLOCATE_FAILED;
   }
 
+  return 0;
+}
+
+int Client::fpck(int index) {
+  vector<uint8_t> pieces = nInfo->getPieces();
+  int piece_hash_count = pieces.size() / PIECE_HASH;
+
+  ifstream fp;
+  fp.open(nInfo->getName(), ios::in | ios::binary);
+  fp.seekg(index * nInfo->getPieceLength());
+  uint8_t* piece = new uint8_t[nInfo->getPieceLength()];
+  fp.read((char *)piece, nInfo->getPieceLength());
+  ConstBufferPtr piece_hash = util::sha1(make_shared<Buffer>(piece, nInfo->getPieceLength()));
+
+  bool valid = true;
+  for (int i = 0; i < PIECE_HASH; i++) {
+    if (pieces[(index * PIECE_HASH) + i] != piece_hash->get()[i]) {
+      valid = false;
+    }
+  }
+
+  if (!valid) {
+    fprintf(stderr, "Piece hash check failed");
+    return RC_PIECE_NOT_VALID;
+  }
+
+  fprintf(stderr, "Piece %d validated\n", index);
+  int byte = index / 8;
+  int offset = index % 8;
+  uint8_t mask = 1;
+  nBitfield[byte] |= mask << offset;
+
+  cout << "BITFIELD IS ";
+  for (int i = 0; i < nFieldSize; i++) {
+    for (int j = 0; j < 8; j++) {
+      cout << ((nBitfield[i] >> j) & mask);
+    }
+  }
+  cout << endl;
+
+  delete [] piece;
   return 0;
 }
 
@@ -597,16 +639,31 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
 
   const uint8_t* peers_bitfield = peerBitfields[peer];
 
+  cout << "CANDIDATE BITFIELD IS ";
+  for (int i = 0; i < nFieldSize; i++) {
+    for (int j = 0; j < 8; j++) {
+      cout << ((peers_bitfield[i] >> j) & mask);
+    }
+  }
+  cout << endl;
+  cout << "OUR BITFIELD IS ";
+  for (int i = 0; i < nFieldSize; i++) {
+    for (int j = 0; j < 8; j++) {
+      cout << ((nBitfield[i] >> j) & mask);
+    }
+  }
+  cout << endl;
   if (peers_bitfield != NULL) {
     for (int i = 0; i < nFieldSize; i++) {
       for (int j = 0; j < 8; j++) {
-        uint8_t candidate_bit = (peers_bitfield[j] >> j) & mask;
+        uint8_t candidate_bit = (peers_bitfield[i] >> j) & mask;
         uint8_t bitfield_bit = (nBitfield[i] >> j) & mask;
 
+        fprintf(stderr, "piece no: %d, candidate bit: %d, our bit: %d\n", (i * 8) + j, candidate_bit, bitfield_bit);
         // only request if we're missing the piece and they have the piece
         if (candidate_bit == 1 && bitfield_bit != 1) {
-          int index = (i + 1) * j;
-          cout << "current index is " << index << endl;
+          int index = (i * 8) + j;
+          cout << "Requesting piece " << index << endl;
           msg::Request request_msg = msg::Request(index, 0, nInfo->getPieceLength());
 
           sendPayload(sockfd, request_msg, peer);
@@ -669,29 +726,26 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
 
   const uint32_t index = piece->getIndex();
   ConstBufferPtr block = piece->getBlock();
+/*
+  for (int i = 0; i < block->size(); i++) {
+    cout << block->get()[i];
+  }
+  cout << endl;*/
 
-  FILE* fd;
   int rc;
-  fd = fopen((nInfo->getName()).c_str(), "a+");
-  if (fd) {
 
-    cerr << "We're in this block" << endl;
-    if (fseek(fd, index * nInfo->getPieceLength(), 0) < 0) {
-      fprintf(stderr, "File seek error: %d\n", errno);
-      return RC_FILE_OPEN_FAILED;
-    }
+  ofstream fp;
+  fp.open(nInfo->getName(), ios::in | ios::out | ios::binary);
+cerr << "SEEKING TO " << index * nInfo->getPieceLength() << endl;
+  fp.seekp(index * nInfo->getPieceLength(), ios::beg);
+  fp.write((char *)(block->get()), nInfo->getPieceLength());
 
-    fwrite(block->get(), nInfo->getPieceLength(), 1, fd);
-    if ((rc = fck()) < 0) {
-      fprintf(stderr, "File validation failed: %d\n", rc);
-      return RC_FILE_NOT_VALID;
-    } else {
-      nDownloaded += block->size();
-      fprintf(stderr, "We received %d\n", nDownloaded);
-    }
+  if ((rc = fpck(index)) < 0) {
+    fprintf(stderr, "Piece validation failed: %d\n", rc);
+    return RC_PIECE_NOT_VALID;
   } else {
-    cerr << "File open failed" << endl;
-    return RC_FILE_OPEN_FAILED;
+    nDownloaded += block->size();
+    fprintf(stderr, "We received %d\n", nDownloaded);
   }
 
   return 0;
