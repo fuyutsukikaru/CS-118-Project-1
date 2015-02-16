@@ -74,6 +74,11 @@ struct Peer {
   bool sentBitfield = false;
 };
 
+struct ThreadArgs {
+  int sockfd;
+  int threadId;
+};
+
 enum eventTypes : int {
   kIgnore = -1,
   kStarted = 0,
@@ -91,10 +96,38 @@ public:
   int bindClient(string& clientPort, string ipaddr);
   int createConnection(string ip, string port, int &sockfd);
   int createConnection(string ip, uint16_t port, int &sockfd);
-  void* connectTracker();
+  int connectTracker();
   int prepareRequest(string& request, int event = kIgnore);
   int prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer);
   int sendUnchoke(pAttr peer);
+
+  int getThreadCount() {
+    return threadCount;
+  }
+
+  void incrementTC() {
+    threadCount++;
+  }
+
+  void decrementTC() {
+    threadCount--;
+  }
+
+  pthread_t getThread(int index) {
+    return threads[index];
+  }
+
+  void useThread(int index) {
+    isUsed[index] = true;
+  }
+
+  void unuseThread(int index) {
+    isUsed[index] = false;
+  }
+
+  ThreadArgs getArguments() {
+    return m_args;
+  }
 
 private:
   int extract(const string& url, string& domain, string& port, string& endpoint);
@@ -113,7 +146,8 @@ private:
   int nRemaining = 0;
 
   // the best function I have ever written
-  int nitroConnect(int sleep_count);
+  static void* doNitro(void* object);
+  void* nitroConnect(ThreadArgs args);
 
   int sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer);
 
@@ -170,7 +204,8 @@ private:
   pthread_mutex_t mutex;
   int threadCount;
   pthread_t threads[MAX_THREAD];
-  bool isUsed[MAX_THREAD];
+  bool isUsed[MAX_THREAD] = {0};
+  ThreadArgs m_args;
 };
 
 } // namespace sbt

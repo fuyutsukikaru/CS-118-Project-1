@@ -40,9 +40,6 @@ main(int argc, char** argv)
 
     // Initialise the client.
     sbt::Client client(argv[1], argv[2]);
-
-    // Create socket using TCP IP
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
   }
   catch (std::exception& e)
   {

@@ -44,7 +44,7 @@ def build(bld):
         target="SimpleBT",
         features=['cxx', 'cxxstlib'],
         source =  bld.path.ant_glob(['src/**/*.cpp']),
-        use = ['BOOST', 'CRYPTOPP'],
+        use = ['BOOST', 'CRYPTOPP', 'PTHREAD'],
         includes = ['src', '.'],
         export_includes=['src', '.'],
         )

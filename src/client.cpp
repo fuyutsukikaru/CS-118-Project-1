@@ -23,7 +23,6 @@ Client::Client(const std::string& port, const std::string& torrent) {
 
   // multi-thread stuff
   threadCount = 0;
-  isUsed = {0};
 
   // Generate a randomized peer_id
   nPeerId = generatePeer();
@@ -45,27 +44,8 @@ Client::Client(const std::string& port, const std::string& torrent) {
   // Extract the tracker_url and tracker_port from the announce
   extract(nInfo->getAnnounce(), nTrackerUrl, nTrackerPort, nTrackerEndpoint);
 
-  ThreadArgs arg;
-
-  while (true) {
-    pthread_mutex_lock(&mutex);
-    if (threadCount >= MAX_THREAD - 1) {
-      sleep(1);
-      continue;
-    } else {
-      for (int i = 0; i < MAX_THREAD; i++) {
-        if (isUsed[i] == false) {
-          arg.threadId = i;
-          isUsed[i] = true;
-          break;
-        }
-      }
-    }
-    pthread_mutex_unlock(&mutex);
-
-    // Connect to the tracker
-    connectTracker();
-  }
+  // Connect to the tracker
+  connectTracker();
 }
 
 Client::~Client() {
@@ -284,7 +264,7 @@ int Client::bindClient(string& clientPort, string ipaddr) {
  * - receive/parse/decode the response
  * - close the connection
  */
-void* Client::connectTracker(void* args) {
+int Client::connectTracker() {
 
   // Prepare the request with a started event
   prepareRequest(getRequest, kStarted);
@@ -295,7 +275,7 @@ void* Client::connectTracker(void* args) {
   bindClient(nPort, CLIENT_IP);
 
   // Keep the client running until tracker ends client
-  //while (true) {
+  while (true) {
     //fprintf(stderr, "Started connecting to the tracker\n");
     // Create socket and connect to port using TCP IP
     createConnection(tip, nTrackerPort, sockfd);
@@ -356,8 +336,31 @@ void* Client::connectTracker(void* args) {
 
     }
 
-    nitroConnect(2);
-    nitroConnect(2);
+    vector<int>::iterator iter = sockArray.begin();
+    for (; iter != sockArray.end(); iter++) {
+      pthread_mutex_lock(&mutex);
+      if (threadCount >= MAX_THREAD - 1) {
+        sleep(1);
+        continue;
+      } else {
+        for (int i = 0; i < MAX_THREAD; i++) {
+          if (isUsed[i] == false) {
+            m_args.threadId = i;
+            isUsed[i] = true;
+            break;
+          }
+        }
+      }
+      pthread_mutex_unlock(&mutex);
+      m_args.sockfd = *iter;
+
+      pthread_create(&threads[m_args.threadId], 0, doNitro, this);
+
+      /*
+      nitroConnect(2);
+      nitroConnect(2);
+      */
+    }
 
     // Prepare a new request without any events
     if (nDownloaded < nInfo->getLength()) {
@@ -369,34 +372,47 @@ void* Client::connectTracker(void* args) {
 
     // Close the sockfd so that we can create a new connection for non-persistent Http requests
     close(sockfd);
-  //}
+  }
 
   return 0;
+}
+
+void* Client::doNitro(void* object) {
+  Client* _this = static_cast<Client *>(object);
+  _this->nitroConnect(_this->getArguments());
 }
 
 /*
  * This connect function has flames painted on it so it goes faster
  */
-int Client::nitroConnect(int sleep_count) {
+void* Client::nitroConnect(ThreadArgs args) {
+    int sockfd = args.sockfd;
+    pthread_mutex_lock(&mutex);
+    threadCount++;
+    pthread_mutex_unlock(&mutex);
+
     // Loop through the list of peers you're connected to
-    vector<int>::iterator iter = sockArray.begin();
-    for (; iter != sockArray.end(); iter++) {
-      string t_pip = socketToPeer[*iter].ip;
-      int t_pport = socketToPeer[*iter].port;
-      pAttr t_pAttr(t_pip, t_pport);
+    string t_pip = socketToPeer[sockfd].ip;
+    int t_pport = socketToPeer[sockfd].port;
+    pAttr t_pAttr(t_pip, t_pport);
 
-      // Send an interested to every peer you're connected to
-      if (!peerStatus[t_pAttr].unchoked) {
-        sendInterested(*iter, t_pAttr);
-      }
-
-      // If the peer is unchoked, then send a request for a piece you don't have
-      if (peerStatus[t_pAttr].unchoked) {
-        sendRequest(*iter, t_pAttr);
-      }
+    // Send an interested to every peer you're connected to
+    if (!peerStatus[t_pAttr].unchoked) {
+      sendInterested(sockfd, t_pAttr);
     }
 
-    sleep(nTrackerResponse->getInterval() / sleep_count);
+    // If the peer is unchoked, then send a request for a piece you don't have
+    if (peerStatus[t_pAttr].unchoked) {
+      sendRequest(sockfd, t_pAttr);
+    }
+
+    pthread_mutex_lock(&mutex);
+    isUsed[args.threadId] = false;
+    threadCount--;
+    pthread_mutex_unlock(&mutex);
+
+    sleep(nTrackerResponse->getInterval());
+    //sleep(nTrackerResponse->getInterval() / sleep_count);
 
     return 0;
 }
