@@ -265,6 +265,25 @@ int Client::connectTracker() {
         }
       }
 
+      // Loop through the list of peers you're connected to
+      vector<int>::iterator iter = sockArray.begin();
+      for (; iter != sockArray.end(); iter++) {
+        string t_pip = socketToPeer[*iter].ip;
+        int t_pport = socketToPeer[*iter].port;
+        pAttr t_pAttr(t_pip, t_pport);
+
+        // Send an interested to every peer you're connected to
+        sendInterested(*iter, t_pAttr);
+
+        // Send a have to every peer you're connected to
+        sendHave(*iter, t_pAttr);
+
+        // If the peer is unchoked, then send a request for a piece you don't have
+        if (peerUnchoked[t_pAttr]) {
+          //sendRequest(*iter, t_pAttr);
+        }
+      }
+
       // Prepare a new request without any events
       prepareRequest(getRequest);
     }
@@ -325,7 +344,15 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd) {
 
 int Client::sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer) {
   ConstBufferPtr enc_msg = payload.encode();
-  int msg_length = payload.getPayload()->size() + 5;
+
+
+  int msg_length = 5;
+  if (payload.getPayload() != NULL) {
+    // Calculate the size of the payload
+    msg_length += payload.getPayload()->size();
+  }
+
+  // Recast the buffer into a format to send to peer
   const char* b_msg = reinterpret_cast<const char*>(enc_msg->buf());
   if (send(sockfd, b_msg, msg_length, 0) < 0) {
     fprintf(stderr, "Failed to send payload to peer %s:%d\n", peer.first.c_str(), peer.second);
@@ -364,8 +391,9 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
   string t_pip = socketToPeer[sockfd].ip;
   int t_pport = socketToPeer[sockfd].port;
   pAttr t_pAttr(t_pip, t_pport);
-  parseMessage(sockfd, hs_res, t_pAttr);
 
+  peerUnchoked[t_pAttr] = false;
+  parseMessage(sockfd, hs_res, t_pAttr);
 
   return 0;
 }
@@ -509,6 +537,7 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
         break;
       case msg::MSG_ID_UNCHOKE:
         // mark this peer as unchoked and send an interested
+        handleUnchoke(msg, peer);
         break;
       case msg::MSG_ID_BITFIELD:
         // update our local instance of the peer's bitfield
@@ -533,42 +562,13 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
   return 0;
 }
 
-int Client::sendBitfield(int &sockfd, pAttr peer) {
+int Client::sendBitfield(int& sockfd, pAttr peer) {
   ConstBufferPtr msg = make_shared<sbt::Buffer>(nBitfield, nFieldSize);
   msg::Bitfield bitfield_msg = msg::Bitfield(msg);
   sendPayload(sockfd, bitfield_msg, peer);
 
-  receiveBitfield(sockfd, peer);
+  receivePayload(sockfd, peer);
 
-  return 0;
-}
-
-int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
-  fprintf(stderr, "We are now handling the bitfield\n");
-  msg::Bitfield* tempBitfield = new msg::Bitfield();
-  tempBitfield->decode(msg);
-  const uint8_t* b_msg = (tempBitfield->getBitfield())->buf();
-
-  peerBitfields[peer] = b_msg;
-
-  return 0;
-}
-
-uint8_t Client::getBit(uint8_t* array, int index) {
-  return (array[index/8] >> 7 - (index * 0x7)) & 0x1;
-}
-
-int Client::receiveBitfield(int& sockfd, pAttr peer) {
-  uint8_t hs_buf[1000] = {'\0'};
-  ssize_t n_buf_size = 0;
-  if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
-    fprintf(stderr, "Failed to receive a bitfield from peer.\n");
-    return RC_NO_TRACKER_RESPONSE;
-  }
-  ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
-  fprintf(stderr, "bitfield has length of %d\n", (int)n_buf_size);
-
-  parseMessage(sockfd, hs_res, peer);
   return 0;
 }
 
@@ -599,6 +599,12 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
 int Client::sendInterested(int& sockfd, pAttr peer) {
   msg::Interested intr_msg = msg::Interested();
   sendPayload(sockfd, intr_msg, peer);
+
+  receivePayload(sockfd, peer);
+  return 0;
+}
+
+int Client::sendHave(int& sockfd, pAttr) {
   return 0;
 }
 
@@ -607,6 +613,25 @@ int Client::sendUnchoke(pAttr peer) {
   //msg::Unchoke *unchoke = new msg::Unchoke();
   //sendPayload(*unchoke, peer);
   return 0;
+}
+
+
+int Client::handleBitfield(ConstBufferPtr msg, pAttr peer) {
+  fprintf(stderr, "We are now handling the bitfield\n");
+  msg::Bitfield* tempBitfield = new msg::Bitfield();
+
+  // Decode the bitfield message to get the actual bitfield
+  tempBitfield->decode(msg);
+  const uint8_t* b_msg = (tempBitfield->getBitfield())->buf();
+
+  // Store the peer's bitfield in a map
+  peerBitfields[peer] = b_msg;
+
+  return 0;
+}
+
+uint8_t Client::getBit(uint8_t* array, int index) {
+  return (array[index/8] >> 7 - (index * 0x7)) & 0x1;
 }
 
 int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
@@ -636,6 +661,28 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
     return RC_FILE_OPEN_FAILED;
   }
 
+  return 0;
+}
+
+int Client::handleUnchoke(ConstBufferPtr msg, pAttr peer) {
+  fprintf(stderr, "We are now handling an unchoke message\n");
+
+  // Set peer status to unchoked so that we can begin sending requests
+  peerUnchoked[peer] = true;
+  return 0;
+}
+
+int Client::receivePayload(int& sockfd, pAttr peer) {
+  uint8_t hs_buf[1000] = {'\0'};
+  ssize_t n_buf_size = 0;
+  if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
+    fprintf(stderr, "Failed to receive payload from peer.\n");
+    return RC_NO_TRACKER_RESPONSE;
+  }
+  ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
+  fprintf(stderr, "payload has length of %d\n", (int)n_buf_size);
+
+  parseMessage(sockfd, hs_res, peer);
   return 0;
 }
 

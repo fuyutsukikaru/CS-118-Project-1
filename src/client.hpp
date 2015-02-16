@@ -107,13 +107,15 @@ private:
   int sendBitfield(int& sockfd, pAttr peer);
   int sendRequest(int& sockfd, pAttr peer);
   int sendInterested(int& sockfd, pAttr peer);
+  int sendHave(int& sockfd, pAttr peer);
 
   // functions for dealing with messages
   int handleBitfield(ConstBufferPtr msg, pAttr peer);
   int handlePiece(ConstBufferPtr msg, pAttr peer);
+  int handleUnchoke(ConstBufferPtr msg, pAttr peer);
 
   // functions for receiving messages
-  int receiveBitfield(int& sockfd, pAttr peer);
+  int receivePayload(int& sockfd, pAttr peer);
 
   char getBit(char* array, int index);
 
@@ -139,6 +141,7 @@ private:
   //map<pAttr, int> peerToSocket;
 
   map<pAttr, const uint8_t*> peerBitfields;
+  map<pAttr, bool> peerUnchoked;
 
   // maps peer attributes to whether we have sent to them
   vector<pAttr> hasPeerConnected;
