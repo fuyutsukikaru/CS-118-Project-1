@@ -36,6 +36,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/select.h>
 
 #include <map>
 #include <utility>
@@ -162,6 +163,12 @@ private:
   TrackerResponse* nTrackerResponse;
   vector<PeerInfo> peers;
   msg::HandShake* nHandshake;
+
+  // select
+  int maxSockfd;
+  struct timeval tv;
+  fd_set readFds;
+  fd_set tmpFds;
 };
 
 } // namespace sbt

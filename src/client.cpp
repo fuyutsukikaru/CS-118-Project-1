@@ -21,6 +21,13 @@ Client::Client(const std::string& port, const std::string& torrent) {
   nDownloaded = 0;
   nUploaded = 0;
 
+  // select
+  maxSockfd = 0;
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
+  FD_ZERO(&readFds);
+  FD_ZERO(&tmpFds);
+
   // Generate a randomized peer_id
   nPeerId = generatePeer();
 
@@ -330,6 +337,10 @@ int Client::connectTracker() {
           socketToPeer[peerSockfd] = *it;
 
           hasPeerConnected.push_back(t_pAttr);
+
+          // update max socket whenever we create a new socket for peers
+          maxSockfd = peerSockfd;
+          FD_SET(peerSockfd, &tmpFds);
         }
       }
 
@@ -805,16 +816,37 @@ int Client::handleUnchoke(ConstBufferPtr msg, pAttr peer) {
 }
 
 int Client::receivePayload(int& sockfd, pAttr peer) {
-  uint8_t hs_buf[BUFFER_SIZE] = {'\0'};
-  ssize_t n_buf_size = 0;
-  if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
-    fprintf(stderr, "Failed to receive payload from peer.\n");
-    return RC_NO_TRACKER_RESPONSE;
-  }
-  ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
-  fprintf(stderr, "payload has length of %d\n", (int)n_buf_size);
+  readFds = tmpFds;
 
-  parseMessage(sockfd, hs_res, peer);
+  cout << "SELECT PRE " << endl;
+
+  // set up watcher
+  if (select(maxSockfd + 1, &readFds, NULL, NULL, &tv) == -1) {
+    perror("select");
+    return 4;
+  }
+
+  cout << "SELECT POST " << endl;
+
+  for (int fd = 0; fd < maxSockfd; fd++) {
+    if (FD_ISSET(fd, &readFds)) {
+      cout << " SET FD " << endl;
+      if (fd == sockfd) {
+        cout << " SOCKET EQUALS FD " << endl;
+        uint8_t hs_buf[BUFFER_SIZE] = {'\0'};
+        ssize_t n_buf_size = 0;
+        if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
+          fprintf(stderr, "Failed to receive payload from peer.\n");
+          return RC_NO_TRACKER_RESPONSE;
+        }
+        ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
+        fprintf(stderr, "payload has length of %d\n", (int)n_buf_size);
+
+        parseMessage(sockfd, hs_res, peer);
+      }
+    }
+  }
+
   return 0;
 }
 
