@@ -354,6 +354,9 @@ int Client::connectTracker() {
   return 0;
 }
 
+/*
+ * This connect function has flames painted on it so it goes faster
+ */
 int Client::nitroConnect(int sleep_count) {
     // Loop through the list of peers you're connected to
     vector<int>::iterator iter = sockArray.begin();
@@ -364,9 +367,6 @@ int Client::nitroConnect(int sleep_count) {
 
       // Send an interested to every peer you're connected to
       sendInterested(*iter, t_pAttr);
-
-      // Send a have to every peer you're connected to
-      sendHave(*iter, t_pAttr);
 
       // If the peer is unchoked, then send a request for a piece you don't have
       if (peerStatus[t_pAttr].unchoked) {
@@ -624,7 +624,6 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
         // then, if we're already unchoked, send a request
         // if not, send an interested
         handleBitfield(msg, peer);
-        //sendRequest(sockfd, peer);
         break;
       case msg::MSG_ID_REQUEST:
         // send the requested piece
@@ -710,7 +709,10 @@ int Client::sendInterested(int& sockfd, pAttr peer) {
   return 0;
 }
 
-int Client::sendHave(int& sockfd, pAttr) {
+int Client::sendHave(int& sockfd, pAttr peer, unsigned int index) {
+  msg::Have have = msg::Have(index);
+  sendPayload(sockfd, have, peer);
+
   return 0;
 }
 
@@ -772,6 +774,12 @@ int Client::handlePiece(ConstBufferPtr msg, pAttr peer) {
     nDownloaded += len;
     nRemaining -= len;
     fprintf(stderr, "We received %d\n", len);
+  }
+
+  // now we have the piece, so we send a have to everyone
+  vector<int>::iterator iter = sockArray.begin();
+  for (; iter != sockArray.end(); iter++) {
+    sendHave(*iter, peer, index);
   }
 
   return 0;
