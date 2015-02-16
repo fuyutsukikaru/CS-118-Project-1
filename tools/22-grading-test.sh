@@ -43,3 +43,5 @@ rm -f ./text.txt
 rm -f ./tools/text.txt
 rm -f ./complete.tmp
 rm -f ./test.result
+
+trap 'kill $(jobs -p)' SIGINT SIGTERM EXIT
