@@ -156,24 +156,41 @@ int Client::bindClient(string& clientPort, string ipaddr) {
     return RC_CLIENT_CONNECTION_FAILED;
   }
 
+  fprintf(stderr, "We are now listening on the port %s\n", nPort.c_str());
+
   // Accept a connection
   struct sockaddr_in peerAddr;
   socklen_t peerAddrLen;
+  fprintf(stderr, "Awaiting to accept a connection from a peer\n");
   int peerSockfd = accept(clientSockfd, (struct sockaddr*) &peerAddr, &peerAddrLen);
-cout << "accepted" << endl;
   if (peerSockfd == -1) {
     fprintf(stderr, "Could not accept connection from peer\n");
     // return RC_PEER_ACCEPT_FAILED;
     return 0;
-  } else {
-    char buf[BUFFER_SIZE] = {'\0'};
-    if (recv(peerSockfd, buf, sizeof(buf), 0) == -1) {
-      fprintf(stderr, "Failed to receive a response from tracker.\n");
-      return RC_NO_TRACKER_RESPONSE;
-    }
-    fprintf(stdout, "Received a connection from the peer with ip:port %d:%d\n", peerAddr.sin_addr.s_addr, peerAddr.sin_port);
   }
 
+  fprintf(stderr, "We've accepted a new connection\n");
+
+  char buf[BUFFER_SIZE] = {'\0'};
+  ssize_t buf_size = 0;
+  if ((buf_size = recv(peerSockfd, buf, sizeof(buf), 0)) == -1) {
+    fprintf(stderr, "Failed to receive a response from tracker.\n");
+    return RC_NO_TRACKER_RESPONSE;
+  }
+  fprintf(stderr, "Received a connection from the peer with ip:port %d:%d\n", peerAddr.sin_addr.s_addr, peerAddr.sin_port);
+
+  string pip;
+  ostringstream convert;
+  convert << peerAddr.sin_addr.s_addr;
+  pip = convert.str();
+  fprintf(stderr, "Peer's ip is %s\n", pip.c_str());
+  int pport = peerAddr.sin_port;
+  pAttr t_pAttr(pip, pport);
+
+  Peer peerstat;
+
+  peerStatus[t_pAttr] = peerstat;
+  sockArray.push_back(peerSockfd);
   /*HandShake* tempHandshake = new HandShake();
 
   sockArray.push_back(peerSockfd);
@@ -218,7 +235,7 @@ int Client::connectTracker() {
     }
 
     // Initialize a new buffer to store the response message
-    char buf[1000] = {'\0'};
+    char buf[BUFFER_SIZE] = {'\0'};
     if (recv(sockfd, buf, sizeof(buf), 0) == -1) {
       fprintf(stderr, "Failed to receive a response from tracker.\n");
       return RC_NO_TRACKER_RESPONSE;
@@ -279,7 +296,7 @@ int Client::connectTracker() {
         sendHave(*iter, t_pAttr);
 
         // If the peer is unchoked, then send a request for a piece you don't have
-        if (peerUnchoked[t_pAttr]) {
+        if (peerStatus[t_pAttr].unchoked) {
           sendRequest(*iter, t_pAttr);
         }
       }
@@ -345,7 +362,6 @@ int Client::createConnection(string ip, uint16_t port, int &sockfd) {
 int Client::sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer) {
   ConstBufferPtr enc_msg = payload.encode();
 
-
   int msg_length = 5;
   if (payload.getPayload() != NULL) {
     // Calculate the size of the payload
@@ -378,7 +394,7 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
   }
 
   // Initialize a new buffer to store the Handshake response
-  char hs_buf[100000] = {'\0'};
+  char hs_buf[BUFFER_SIZE] = {'\0'};
   ssize_t n_buf_size = 0;
   if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
     fprintf(stderr, "Failed to receive a response from peer.\n");
@@ -391,7 +407,10 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
   // this works
   pAttr t_pAttr(peer.ip, peer.port);
 
-  peerUnchoked[t_pAttr] = false;
+  Peer peerInfo;
+  peerInfo.sentHandshake = true;
+
+  peerStatus[t_pAttr] = peerInfo;
   parseMessage(sockfd, hs_res, t_pAttr);
 
   return 0;
@@ -679,12 +698,12 @@ int Client::handleUnchoke(ConstBufferPtr msg, pAttr peer) {
   fprintf(stderr, "We are now handling an unchoke message\n");
 
   // Set peer status to unchoked so that we can begin sending requests
-  peerUnchoked[peer] = true;
+  peerStatus[peer].unchoked = true;
   return 0;
 }
 
 int Client::receivePayload(int& sockfd, pAttr peer) {
-  uint8_t hs_buf[1000] = {'\0'};
+  uint8_t hs_buf[BUFFER_SIZE] = {'\0'};
   ssize_t n_buf_size = 0;
   if ((n_buf_size = recv(sockfd, hs_buf, sizeof(hs_buf), 0)) == -1) {
     fprintf(stderr, "Failed to receive payload from peer.\n");

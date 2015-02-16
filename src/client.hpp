@@ -65,6 +65,12 @@ namespace sbt {
 // uniquely identify peers through <ip, port>
 typedef pair<string, int> pAttr;
 
+struct Peer {
+  bool unchoked = false;
+  bool sentHandshake = false;
+  bool sentBitfield = false;
+};
+
 enum eventTypes : int {
   kIgnore = -1,
   kStarted = 0,
@@ -141,7 +147,7 @@ private:
   //map<pAttr, int> peerToSocket;
 
   map<pAttr, const uint8_t*> peerBitfields;
-  map<pAttr, bool> peerUnchoked;
+  map<pAttr, Peer> peerStatus;
 
   // maps peer attributes to whether we have sent to them
   vector<pAttr> hasPeerConnected;
