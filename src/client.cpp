@@ -315,31 +315,13 @@ int Client::connectTracker() {
         }
       }
 
-      // Loop through the list of peers you're connected to
-      vector<int>::iterator iter = sockArray.begin();
-      for (; iter != sockArray.end(); iter++) {
-        string t_pip = socketToPeer[*iter].ip;
-        int t_pport = socketToPeer[*iter].port;
-        pAttr t_pAttr(t_pip, t_pport);
-
-        // Send an interested to every peer you're connected to
-        sendInterested(*iter, t_pAttr);
-
-        // Send a have to every peer you're connected to
-        sendHave(*iter, t_pAttr);
-
-        // If the peer is unchoked, then send a request for a piece you don't have
-        if (peerStatus[t_pAttr].unchoked) {
-          sendRequest(*iter, t_pAttr);
-        }
-      }
-
     }
+
+    nitroConnect(2);
+    nitroConnect(2);
+
     // Prepare a new request without any events
     prepareRequest(getRequest);
-
-    // Sleep for the interval we received from this either the previous or current response
-    sleep(nTrackerResponse->getInterval());
 
     num_times++;
 
@@ -348,6 +330,31 @@ int Client::connectTracker() {
   }
 
   return 0;
+}
+
+int Client::nitroConnect(int sleep_count) {
+    // Loop through the list of peers you're connected to
+    vector<int>::iterator iter = sockArray.begin();
+    for (; iter != sockArray.end(); iter++) {
+      string t_pip = socketToPeer[*iter].ip;
+      int t_pport = socketToPeer[*iter].port;
+      pAttr t_pAttr(t_pip, t_pport);
+
+      // Send an interested to every peer you're connected to
+      sendInterested(*iter, t_pAttr);
+
+      // Send a have to every peer you're connected to
+      sendHave(*iter, t_pAttr);
+
+      // If the peer is unchoked, then send a request for a piece you don't have
+      if (peerStatus[t_pAttr].unchoked) {
+        sendRequest(*iter, t_pAttr);
+      }
+    }
+
+    sleep(nTrackerResponse->getInterval() / sleep_count);
+
+    return 0;
 }
 
 int Client::createConnection(string ip, string port, int &sockfd) {

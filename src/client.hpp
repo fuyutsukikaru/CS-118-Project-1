@@ -108,6 +108,9 @@ private:
   int nUploaded = 0;
   int nRemaining = 0;
 
+  // the best function I have ever written
+  int nitroConnect(int sleep_count);
+
   int sendPayload(int& sockfd, msg::MsgBase& payload, pAttr peer);
 
   // functions for sending messages
