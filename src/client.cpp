@@ -596,18 +596,12 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
   uint8_t mask = 1;
 
   const uint8_t* peers_bitfield = peerBitfields[peer];
-  if (peers_bitfield == NULL) {
-    cout << "peer does not have anything" << endl;
-  }
 
   if (peers_bitfield != NULL) {
     for (int i = 0; i < nFieldSize; i++) {
       for (int j = 0; j < 8; j++) {
-        cout << "pre segfault" << endl;
-        cout << "candidatebitsubj is " << peers_bitfield[j] << endl;
         uint8_t candidate_bit = (peers_bitfield[j] >> j) & mask;
         uint8_t bitfield_bit = (nBitfield[i] >> j) & mask;
-        cout << "bitfieldbit is " << bitfield_bit << endl;
 
         // only request if we're missing the piece and they have the piece
         if (candidate_bit == 1 && bitfield_bit != 1) {
@@ -621,6 +615,9 @@ int Client::sendRequest(int& sockfd, pAttr peer) {
         }
       }
     }
+  } else {
+    // some error for empty bitfield
+    cout << "peer does not have anything" << endl;
   }
 
   return 0;
