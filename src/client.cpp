@@ -388,9 +388,8 @@ int Client::prepareHandshake(int &sockfd, ConstBufferPtr infoHash, PeerInfo peer
   // Calculate the actual size of the response message
   ConstBufferPtr hs_res = make_shared<sbt::Buffer>(hs_buf, n_buf_size);
 
-  string t_pip = socketToPeer[sockfd].ip;
-  int t_pport = socketToPeer[sockfd].port;
-  pAttr t_pAttr(t_pip, t_pport);
+  // this works
+  pAttr t_pAttr(peer.ip, peer.port);
 
   peerUnchoked[t_pAttr] = false;
   parseMessage(sockfd, hs_res, t_pAttr);
@@ -544,6 +543,7 @@ int Client::parseMessage(int& sockfd, ConstBufferPtr msg, pAttr peer) {
         // then, if we're already unchoked, send a request
         // if not, send an interested
         handleBitfield(msg, peer);
+        //sendRequest(sockfd, peer);
         break;
       case msg::MSG_ID_REQUEST:
         // send the requested piece
