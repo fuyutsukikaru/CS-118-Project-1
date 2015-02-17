@@ -1,6 +1,6 @@
-Project 1 Part 1
-
 Team:
+
+Project 1 Part 1
 
 Soomin Jeong
 UID: 304-116-854
@@ -15,3 +15,18 @@ James Wu
 UID: 204-135-990
 I wrote all the functions to format the GET request, including extracting
 host and port number from a given URL
+
+Project 1 Part 2
+
+Soomin Jeong
+I set up handshakes and all responses (unchoke, interested, bitfield).
+I also attempted uploading, but could not thread it properly.
+The code for uploading is commented out.
+
+Jeffrey Wang
+I initialized the bitfield and calculated the size of the pieces.
+I also attempted multi-threading, but failed miserably.
+
+James Wu
+I handled pieces and took care of all bit shifting operations.
+I also dealt with sending and receiving payloads for all messages.
